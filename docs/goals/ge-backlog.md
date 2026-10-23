@@ -116,6 +116,7 @@ conflict. Milestone M12d in [`../goals.md`](../goals.md) takes these by group.
 - the software Vulkan driver's leaks suppressed under `ge leaks`
 - GPU labs on no adapter reported as skipped
 - `ge add lab --kind=overlay`
+- `ge services check` (a game's store catalog checked by `check_catalog`, and later diffed against a store's exported partner configuration)
 - `ge doctor --tools` / `ge env` (which tools, versions and drivers a gate needs, and which are missing)
 
 (`ge shot` is M12b's; `ge anim` is M14b's.)

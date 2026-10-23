@@ -21,7 +21,7 @@ import { join } from "node:path";
 const ROOT = new URL("..", import.meta.url).pathname;
 // Which engine target each engine/ directory is built into (the root CMakeLists.txt). A new
 // engine directory adds its row here; the check says so if one is missing.
-const ENGINE_TARGET = { core: "core", loop: "core", audio: "audio", assets: "assets", ai: "ai", input: "input", move: "move", camera: "camera", net: "net", lab: "lab", gpu: "gpu", render: "render", platform: "platform", cli: "cli", play: "play", prof: "prof" };
+const ENGINE_TARGET = { core: "core", loop: "core", audio: "audio", assets: "assets", ai: "ai", input: "input", move: "move", camera: "camera", net: "net", services: "services", lab: "lab", gpu: "gpu", render: "render", platform: "platform", cli: "cli", play: "play", prof: "prof" };
 
 const errors = [];
 const err = (msg) => errors.push(msg);
