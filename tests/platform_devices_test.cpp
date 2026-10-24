@@ -11,6 +11,7 @@
 #include <chrono>
 #include <cmath>
 #include <cstdio>
+#include <filesystem>
 #include <memory>
 #include <thread>
 
@@ -20,6 +21,7 @@
 #include "input/names.hpp"
 #include "input/state.hpp"
 #include "platform/devices.hpp"
+#include "platform/window.hpp"
 
 namespace in = ge::input;
 namespace pl = ge::platform;
@@ -235,4 +237,15 @@ TEST(keys_and_a_relative_mouse_are_read_through_the_windows_pump) {
   CHECK_MSG(found == 2, "both deltas arrive, in order, as the mouse's motion");
   if (!relative) std::fprintf(stderr, "note: relative mode was not in force (no focus)\n");
   pl::set_relative_mouse(*window, false);
+}
+
+TEST(the_prefs_dir_is_the_players_own_and_is_made) {
+  const std::string dir = pl::prefs_dir("gameengine2-test", "prefs");
+  if (dir.empty()) return;  // a platform with no per-user place: a game keeps nothing
+  CHECK_MSG(dir.back() == '/' || dir.back() == '\\', "the directory ends in a separator");
+  CHECK_MSG(std::filesystem::is_directory(dir), "the directory is made when missing");
+  const std::filesystem::path app = std::filesystem::path(dir).parent_path();
+  std::error_code ec;
+  std::filesystem::remove(app, ec);
+  std::filesystem::remove(app.parent_path(), ec);
 }

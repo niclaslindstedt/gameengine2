@@ -267,6 +267,7 @@ characters.
 | `games/fall_line/cfg/` | Fall Line's cvars (`fall_line_cfg`): every setting a cfg may change, bound to the Settings its app reads | `console` |
 | `games/fall_line/sound/` | Fall Line's sound (`fall_line_sound`, no GPU): the bank, the route, the listener, the mix | `audio`, `sim` |
 | `games/fall_line/camera/` | Fall Line's camera (`fall_line_camera`, no GPU): the ladder of engine rigs and the camera key, the skier as the subject, the trunks and posts it answers | `camera` |
+| `games/fall_line/controls/` | Fall Line's controls (`fall_line_controls`, no GPU): the actions and default bindings, the player's file, the rebinding walk, what is felt, the run played by hand, scripted sessions | `input` |
 | `games/fall_line/labs/` | Fall Line's labs, the headless ones and the GPU's | `sim`, `labs`, `audio` |
 | `games/fall_line/app/` | Fall Line's presentation (`fall_line_app`): the pass table, the look, the scene, the views, the `fall_line` window; then the HUD | `platform`, `gpu`, `render`, `ui`, `audio` |
 | `tests/` | `<topic>_test.cpp`, one executable each; `check.hpp` (the harness), `golden.hpp`, `golden/` | `testing` |

@@ -331,19 +331,30 @@ class FallLineRun final : public ge::play::Run {
   int32_t dropped_ = 0;
 };
 
-std::unique_ptr<ge::play::Run> open_run(const ge::play::Setup& setup, std::string& error) {
-  const double rivals = setup.number("rivals");
-  const double version = setup.number("version");
+// The setup's rivals and hands, checked: false with `error` when either is out of range.
+bool read_field(const ge::play::Setup& setup, int32_t& rivals, HandsProfile& hands,
+                std::string& error) {
+  const double n = setup.number("rivals");
   const auto given = setup.options.find("hands");
-  const auto hands = hands_profile(given == setup.options.end() ? "none" : given->second);
-  if (!hands) {
+  const auto profile = hands_profile(given == setup.options.end() ? "none" : given->second);
+  if (!profile) {
     error = "hands must be `none` or `human` (fall_line/sim/hands.hpp)";
-    return nullptr;
+    return false;
   }
-  if (rivals < 0 || rivals > 7 || rivals != num::round(rivals)) {
+  if (n < 0 || n > 7 || n != num::round(n)) {
     error = "rivals must be a whole number from 0 to 7";
-    return nullptr;
+    return false;
   }
+  rivals = static_cast<int32_t>(n);
+  hands = *profile;
+  return true;
+}
+
+std::unique_ptr<ge::play::Run> open_run(const ge::play::Setup& setup, std::string& error) {
+  const double version = setup.number("version");
+  int32_t rivals = 0;
+  HandsProfile hands = HandsProfile::none;
+  if (!read_field(setup, rivals, hands, error)) return nullptr;
   try {
     // The last map built, kept: `ge diverge` and a replay open the same map twice.
     static double last_seed = 0;
@@ -356,8 +367,7 @@ std::unique_ptr<ge::play::Run> open_run(const ge::play::Setup& setup, std::strin
       last_version = version;
     }
     std::shared_ptr<const mg::Level> level = last;
-    return std::make_unique<FallLineRun>(std::move(level), setup.seed, static_cast<int32_t>(rivals),
-                                         *hands);
+    return std::make_unique<FallLineRun>(std::move(level), setup.seed, rivals, hands);
   } catch (const mg::GenerateError& e) {
     error = "seed " + exact(setup.seed) + " built no map: " + e.what() +
             "; pick another seed, or run `make lab LAB=analyze ARGS=--seeds=" + exact(setup.seed) +
@@ -395,6 +405,14 @@ constexpr std::array<ge::play::Option, 3> kOptions{{
 const GameState* state_of(const ge::play::Run& run) {
   const auto* r = dynamic_cast<const FallLineRun*>(&run);
   return r ? &r->game() : nullptr;
+}
+
+std::unique_ptr<ge::play::Run> open_run_on(std::shared_ptr<const mg::Level> level,
+                                           const ge::play::Setup& setup, std::string& error) {
+  int32_t rivals = 0;
+  HandsProfile hands = HandsProfile::none;
+  if (!read_field(setup, rivals, hands, error)) return nullptr;
+  return std::make_unique<FallLineRun>(std::move(level), setup.seed, rivals, hands);
 }
 
 const ge::play::GameSpec kGame{

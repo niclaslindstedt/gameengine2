@@ -11,6 +11,8 @@
 //   place, and the events since the last observation (his own, and any shoulder he was in).
 // - `state`: every racer's skier and progress, to the bit, for `ge diverge`.
 // - `pilot`: the bot's controls for the player.
+// - `open_run_on`: a run on a map the caller built (the app's, under the sky its cvars picked),
+//   which `ge replay` cannot rebuild from the log's seed alone.
 // - `state_of`: the GameState behind a Run this spec opened, for the game's GPU renderer
 //   (app/play_render.hpp), which draws a run the play contract steps.
 // - `trace`: the bot's decisions (bot.hpp), the player's pilot as agent 0 and each rival as his
@@ -24,7 +26,10 @@
 #pragma once
 
 #include <cstddef>
+#include <memory>
+#include <string>
 
+#include "mountain/mapgen/types.hpp"
 #include "play/game.hpp"
 
 namespace fall_line::sim {
@@ -39,7 +44,12 @@ inline constexpr double kBendAhead = 30;
 // The game's spec: `GE_GAME(fall_line::sim::kGame)` in the play executable registers it.
 extern const ge::play::GameSpec kGame;
 
-// The state of a run `kGame.open` made, or null for any other Run.
+// A run of `setup`'s field on `level` in place of the seed's race map. Null with `error` when the
+// setup's rivals or hands are out of range.
+std::unique_ptr<ge::play::Run> open_run_on(std::shared_ptr<const ge::mountain::mapgen::Level> level,
+                                           const ge::play::Setup& setup, std::string& error);
+
+// The state of a run `kGame.open` (or `open_run_on`) made, or null for any other Run.
 const GameState* state_of(const ge::play::Run& run);
 
 }  // namespace fall_line::sim
