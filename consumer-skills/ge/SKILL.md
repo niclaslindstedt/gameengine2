@@ -21,6 +21,7 @@ are always the pinned release's.
 ```sh
 ge find <words>                  # what exists: this repo's and the engine's files, skills, lessons
 ge goals free [<row>] --fetch    # the roadmap numbers main and every branch already use, and the next free one
+ge goals claim "<what>"          # that row reserved and pushed to this branch at once; an earlier claim elsewhere wins, and it moves on
 ge explain <file|name>           # one of them: its header comment, declaration, skill, test
 ge add system <name>             # sim/<name>.hpp, .cpp and its replay test, to start from
 ge add lab <name> --kind=<k>     # a lab (sim, scenario, picture, bench), in the smoke pass
@@ -30,6 +31,7 @@ ge build                         # compiler and CMake errors come back as findin
 ge test [--filter=<regex>]       # every test and lab smoke; each failure a finding
 ge test --affected [--base=<ref>] [--list]  # only the tests the change reaches (the include graph)
 ge lab <id> [--tag=before | --compare=before] [-- <its flags>]   # measure and LOOK
+ge lab publish <id>... [--before=before]   # the run (or several labs') on one self-contained page for the report and the PR
 ge digest [<lab>...] [--write]   # the labs' digests beside tests/labs_digests.txt; --write moves their rows
 ge digest --affected [--list]    # only the labs the change since --base reaches
 ge digest --diff                 # every lab, printing only the digests off the baseline

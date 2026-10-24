@@ -38,7 +38,10 @@ commands. Never commit, push or comment there.
 ## 4. The row
 
 Open `docs/goals.md` and name the milestone row this task serves. If no row fits, the
-task is probably out of scope (G4), so ask before you build it. Then load the skill
+task is probably out of scope (G4), so ask before you build it. A task that adds a NEW row claims
+its number before anything else: `build/<preset>/ge goals claim "<what the row is>"` (`--under=M17`
+for a letter under one) writes it to `docs/goals/reserved.md`, pushes it to your branch at once
+and checks every branch, so two threads starting together never take the same number. Then load the skill
 `AGENTS.md` routes the subject to, plus `write-code`.
 
 ## 5. What already exists

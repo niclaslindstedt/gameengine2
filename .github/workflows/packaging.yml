@@ -21,6 +21,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 120
     defaults:
       run:
         shell: bash
@@ -41,6 +42,7 @@ jobs:
 
   scaffold:
     runs-on: ubuntu-24.04
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v7
       - name: ge alone grows a new repo, then holds it to its whole gate, against this tree

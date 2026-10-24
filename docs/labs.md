@@ -109,6 +109,12 @@ never moves a digest.
 In a game repo, `ge lab` is the way in: `ge lab` lists, `ge lab <id> --tag=before` and
 `--compare=before` run one, and with `--json` the lab's whole `report.json` is the answer's
 `result`. `ge lab diff <id>` diffs the pictures (below), every band under its floor a finding.
+`ge lab publish <id>... [--before=<tag>]` puts the last run (of one lab, or of several one after
+another) on one self-contained page for a report or a pull request (`engine/cli/publish.hpp`). Each picture loses its caption band, which the page
+sets as text, and is shrunk to `--width` (720 px) and inlined as a 256-colour GIF
+(`engine/lab/gif.hpp`), with the metrics and tables after it. A kept run stands beside it, picture
+for picture and metric for metric. The labs' PNGs are stored uncompressed, so a page of a dozen of
+them inline would pass a published page's 16 MB, but as GIFs they come to tens of kilobytes each.
 
 ### The sweep: one constant or one flag at several values
 

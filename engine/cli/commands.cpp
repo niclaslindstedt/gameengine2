@@ -78,6 +78,12 @@ constexpr FlagSpec kLabSweepFlags[] = {
     kEngine,
     kRepo};
 
+constexpr FlagSpec kLabPublishFlags[] = {
+    {"before", "<tag>",
+     "a kept run (ge lab <id> --tag=<tag>) shown beside this one, metric by metric"},
+    {"width", "<px>", "the pictures' width on the page (default 720)"},
+    {"out", "<file>", "where the page goes (default previews/<id>/publish.html)"},
+    kRepo};
 constexpr FlagSpec kLabDiffFlags[] = {
     kPreset,
     {"against", "<name>", "the kept run to diff against (default before: --tag=before)"},
@@ -116,6 +122,11 @@ constexpr FlagSpec kLintFlags[] = {
 constexpr FlagSpec kGoalsFlags[] = {
     {"base", "<ref>", "the roadmap rows are already taken on (default origin/main)"},
     {"fetch", "", "git fetch origin first, so every branch is current"},
+    kRepo};
+constexpr FlagSpec kGoalsClaimFlags[] = {
+    {"under", "<row>",
+     "claim the next letter under this milestone (M17: M17e) instead of a number"},
+    {"base", "<ref>", "the roadmap rows are already taken on (default origin/main)"},
     kRepo};
 constexpr FlagSpec kGoldenDiffFlags[] = {
     {"base", "<ref>", "the git ref to compare with (default HEAD)"}, kRepo};
@@ -327,6 +338,10 @@ const CommandSpec kCommands[] = {
      "the roadmap rows taken on the base and on every remote branch, and the next free number "
      "(or, for a row such as M17, the next free letter under it)",
      kGoalsFlags, "ge goals free --fetch", "commit"},
+    {"goals claim", "<what>", 1, -1, "learn",
+     "the next free row reserved and pushed to this branch at once, then checked against every "
+     "branch: an earlier claim on the same row keeps it, and this one moves to the next",
+     kGoalsClaimFlags, "ge goals claim \"Lava and slime\"", "commit"},
     {"new", "<dir>", 1, 1, "create",
      "a game repo against this engine release: the simulation, a lab, a test, the skills",
      kNewFlags, "ge new snow-racer --game=racer", "ge"},
@@ -386,6 +401,10 @@ const CommandSpec kCommands[] = {
      "diff every picture of a lab's last run against a kept run: PSNR, SSIM and the share "
      "changed per distance band, each band held to its floor, a four-panel sheet a shot",
      kLabDiffFlags, "ge lab diff world --run -- --views=start,vista", "labs"},
+    {"lab publish", "<id>...", 1, -1, "see",
+     "a lab's last run (or several labs') on one self-contained page to share: every picture "
+     "shrunk and inlined, captions, metrics and tables; --before puts a kept run beside it",
+     kLabPublishFlags, "ge lab publish world --before=before", "labs"},
     {"graph", "<file>...", 1, -1, "see",
      "chart series or spans files (a trace, a bench, a profile) to PNG and SVG; several files "
      "overlay; every outlier comes back as a note",

@@ -126,7 +126,8 @@ porting ends, and nothing outside it may depend on it except `make golden`.
   pictures: a lab's screenshots, before and after side by side, a chart of the numbers, a
   diagram of a design, or a table of measurements drawn as an image. Nearly all work can be
   shown this way; the labs exist to make that cheap (`labs` skill). Put the pictures on one
-  page linked from the report and the PR, never as loose attachments.
+  page linked from the report and the PR, never as loose attachments: `ge lab publish <id>
+  --before=before` writes that page for a lab's run.
 - **SAY WHAT `ge` LACKED.** `ge` is the agent's whole interface (G6), so it grows from what
   agents miss. When a task would have been easier with a `ge` command or flag that does not
   exist (to build, debug, inspect, measure or optimise), say so in the PR description under

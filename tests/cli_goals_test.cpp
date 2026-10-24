@@ -48,3 +48,21 @@ TEST(the_next_free_row_is_one_past_the_highest_taken) {
   CHECK(next_free_letter({""}) == "a");
   CHECK(next_free_letter({"z"}).empty());
 }
+
+TEST(a_claim_adds_its_line_to_the_reserved_table_and_gives_it_up_again) {
+  const std::string held =
+      "# Reserved roadmap rows\n\n| Row | What |\n| --- | --- |\n| M27 | **Fonts** |\n";
+  const std::string with = with_reserved_row(held, "M34", "Lava and slime");
+  CHECK(with == held + "| M34 | **Lava and slime** |\n");
+  CHECK(without_reserved_row(with, "M34") == held);
+  CHECK(without_reserved_row(with, "M3") == with);  // M3 is not M34
+  const std::string fresh = with_reserved_row("", "M34", "Lava");
+  CHECK(fresh.find("| Row | What |\n| --- | --- |\n| M34 | **Lava** |\n") != std::string::npos);
+  CHECK(goal_rows(fresh).size() == 1 && goal_rows(fresh)[0].number == 34);
+}
+
+TEST(the_earliest_claim_wins_and_a_tie_goes_to_the_first_ref_by_name) {
+  CHECK(claim_winner({{"origin/b", 100}, {"origin/a", 101}}) == 0);
+  CHECK(claim_winner({{"origin/b", 100}, {"origin/a", 100}}) == 1);
+  CHECK(claim_winner({{"origin/c", 0}}) == 0);
+}
