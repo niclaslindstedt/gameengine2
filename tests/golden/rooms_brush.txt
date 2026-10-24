@@ -1,0 +1,2 @@
+# triangles digest (rooms_brush_test, GE_GOLDEN_WRITE=1)
+dc b6dfd173268bcae9

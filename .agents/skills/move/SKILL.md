@@ -17,6 +17,7 @@ here names a genre's word: a feel is a ROW of knobs, never a code path.
 | `move/presets.cpp` | The five preset rows and what each is for |
 | `move/world.hpp` | `World::trace`: the one question a mover asks a world, and its contract |
 | `move/box_world.hpp` | Boxes, ramps and stairs as brushes; the swept-box trace |
+| `move/mesh_world.hpp` | A world of triangles: the swept separating-axis trace, bucketed in a grid |
 | `move/step.hpp` | `step_move`: the step's order, `MoveCmd`, `MoveState`, `MoveEvents`, `accelerate`, `wish_of` |
 | `move/strafe.hpp` | `best_wish_angle`, `strafe_cmd`: the strafe jumper's hands |
 | `move/scenarios.hpp` | Staged runs, their worlds and scripts; `run_move_scenario` and its digest |

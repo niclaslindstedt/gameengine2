@@ -17,7 +17,9 @@ plugins/<name>           reusable by any game of one genre or world (§ Plugins)
         │                skier (the skier on the snow: step_skier, snow, limits, the pilot),
         │                snowmobile (the machine on the snow: step_sled, the drive, the pilot),
         │                helicopter (the machine in the air: step_heli, the wash, the pilot),
-        │                paramotor (the speed wing a skier flies: step_para, the air, the pilot)
+        │                paramotor (the speed wing a skier flies: step_para, the air, the pilot),
+        │                rooms (the engine's own level format: rooms grown from their seeds),
+        │                brush (the classic BSP families read into one view, fixture writers)
         ▼
 engine/render  engine/audio  engine/ui     generic draw passes, the synth, the 2D layer
         │             │          │
@@ -100,6 +102,9 @@ One direction of dependency, held by `tools/check-agents.sh` once each layer exi
   walker's), one step over a swept-box trace callback the game answers with its own world, a box
   world for labs and prototypes, the strafe jumper's best angle and the scenarios. It depends on
   `engine/core` only and is a pure function of its inputs, so a run replays from its commands.
+- **`engine/vfs`**: content files (`ge::vfs`, M18a): the pack archive's directory checked whole
+  before anything is read, and each file handed out as a view into the archive. Search paths, zip
+  archives and directories come with the rest of M18a. It depends on `engine/core` only.
 - **`engine/ui`**: the immediate-mode 2D layer (rects, images, SDF text), plus Dear
   ImGui behind `GE_DEV_UI`.
 - **`games/fall_line/app`**: Fall Line's presentation, the `fall_line_app` library (which

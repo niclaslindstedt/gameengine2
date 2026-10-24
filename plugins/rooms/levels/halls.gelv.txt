@@ -1,0 +1,109 @@
+# THE HALLS: the room format's sample level (plugins/rooms/text.hpp is the syntax). A brick hall
+# with a corridor down to a crypt of dressed stone, a gallery of rough stone with a window, two
+# caves grown from their seeds, and a workshop of boards, a boiler room of sheet metal, a tiled
+# bath and a fieldstone cellar: every relief the format grows. The `rooms` lab draws it;
+# tests/rooms_build_test.cpp holds it.
+
+material brick rgb=150,72,52 tex brick_wall
+material plaster rgb=212,206,190 tex plaster
+material flags rgb=120,118,112 tex flagstone
+material stone rgb=140,136,128 relief=rock,6,8 tex stone_wall
+material rock rgb=112,100,88 tex cave_rock wear=0.8
+material gravel rgb=98,90,80 tex gravel
+material timber rgb=110,78,48 tex timber
+material cliff rgb=104,98,92 relief=crag,10,20 tex cliff_rock
+material ashlar rgb=176,166,146 relief=ashlar,3,4 tex sandstone_block
+material boards rgb=142,104,66 relief=planks,2,3 tex oak_boards wear=0.5
+material sheet rgb=150,156,160 relief=corrugated,4,2 tex galvanised_sheet rust=0.3
+material plate rgb=96,100,104 relief=dents,4,6 tex steel_plate
+material tile rgb=206,222,226 relief=tiles,2,3 tex glazed_tile grime=0.4
+material fieldstone rgb=132,124,110 relief=stones,8,4 tex fieldstone moss=0.3
+material cobbles rgb=118,112,104 relief=stones,4,2 tex cobbles
+
+room hall at=0,0,0 seed=1 floor=0:flags ceiling=4:plaster
+corner 0 0 brick
+corner 10 0 brick
+corner 10 8 brick
+corner 0 8 brick
+
+room gallery at=0,0,0 seed=2 floor=0:flags ceiling=3.5:plaster
+corner 10 0 stone
+corner 18 0 stone
+corner 18 6 stone
+corner 10 6 stone
+
+room cave at=0,0,0 seed=88123 floor=0:gravel ceiling=6:rock cave=14,22,20
+corner 1 8 rock
+corner 9 8 rock
+corner 12 12 rock
+corner 10 18 rock
+corner 4 19 rock
+corner -1 14 rock
+
+room grotto at=0,0,0 seed=4051 floor=0:gravel ceiling=5:cliff cave=14,25,20
+corner 12.5 6 cliff
+corner 19 6 cliff
+corner 21 11 cliff
+corner 16 15 cliff
+corner 12.5 12 cliff
+
+room corridor at=0,0,0 seed=5 floor=0:flags ceiling=3:plaster
+corner -12 -6 brick
+corner -9 -6 brick
+corner -9 1 brick
+corner 0 1 brick
+corner 0 4 brick
+corner -12 4 brick
+
+room crypt at=0,-1,0 seed=6 floor=0:flags ceiling=4:ashlar
+corner -14 -14 ashlar
+corner -7 -14 ashlar
+corner -7 -6 ashlar
+corner -14 -6 ashlar
+
+room workshop at=0,0,0 seed=7 floor=0:boards ceiling=3.2:plaster
+corner 0 -8 boards
+corner 8 -8 boards
+corner 8 0 boards
+corner 0 0 boards
+
+room boiler at=0,0,0 seed=8 floor=0:flags ceiling=4.5:plate
+corner 8 -8 sheet
+corner 16 -8 sheet
+corner 16 0 sheet
+corner 8 0 sheet
+
+room bath at=0,0,0 seed=9 floor=0:tile ceiling=3:plaster
+corner 8 -14 tile
+corner 16 -14 tile
+corner 16 -8 tile
+corner 8 -8 tile
+
+room cellar at=0,0,0 seed=10 floor=0:cobbles ceiling=2.8:fieldstone
+corner 0 -14 fieldstone
+corner 8 -14 fieldstone
+corner 8 -8 fieldstone
+corner 0 -8 fieldstone
+
+portal hall 1 gallery at=2 width=2 sill=0 head=2.6
+portal hall 2 cave at=3 width=2 sill=0 head=2.8 trim=timber
+portal hall 3 corridor at=4.5 width=2 sill=0 head=2.5
+portal gallery 1 outside at=2 width=2 sill=1 head=2.5 trim=timber
+portal gallery 2 grotto at=2 width=2 sill=0 head=2.6 trim=timber
+portal corridor 0 crypt at=0 width=3 sill=0 head=2.4
+portal hall 0 workshop at=3 width=2 sill=0 head=2.5 trim=timber
+portal workshop 1 boiler at=3 width=2 sill=0 head=2.5
+portal boiler 0 bath at=3 width=2 sill=0 head=2.4
+portal workshop 0 cellar at=1 width=1.6 sill=0 head=2.2 trim=timber
+portal cellar 1 bath at=2 width=1.6 sill=0 head=2.2
+
+solid hall ashlar 2.5 0 2.5 3 4 3
+solid hall ashlar 7 0 2.5 7.5 4 3
+solid hall ashlar 2.5 0 5 3 4 5.5
+solid hall ashlar 7 0 5 7.5 4 5.5
+solid crypt flags -12 0 -7.2 -9 0.34 -6
+solid crypt flags -12 0 -6.8 -9 0.67 -6
+solid crypt flags -12 0 -6.4 -9 1 -6
+solid crypt ashlar -11 0 -11 -10 3.2 -10
+solid workshop boards 5 0 -6 7 0.9 -5
+solid boiler plate 12 0 -5 14.5 3 -2.5

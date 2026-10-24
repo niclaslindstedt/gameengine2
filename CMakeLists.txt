@@ -17,6 +17,7 @@
 #   ge_wind      the wind as a pure function of place and time (engine/wind; docs/water.md)
 #   ge_water     bodies of water, the waves a wind grows on them and the one query (engine/water)
 #   ge_move      character movement (engine/move: the knobs, the step, the box world, scenarios)
+#   ge_vfs       content files (engine/vfs: the pack archive; search paths and zips to come)
 #   ge_camera    the camera (engine/camera: poses, followers, rigs, shake, transitions, the stack)
 #   ge_play      the play contract (engine/play: GameSpec and Run, the session, the input log,
 #                the bench, the stills `ge shot` draws)
@@ -39,11 +40,11 @@
 #   ge_isa       the instruction-set baseline (x86-64: AVX2), linked by ge_core and
 #                published as ge::isa
 #   ge_flags     warnings, -Werror, sanitizers: this tree only, never published
-# ge_core, ge_fp, ge_isa, ge_assets, ge_ai, ge_wind, ge_water, ge_move, ge_camera, ge_net, ge_console,
-# ge_lab, ge_play, ge_replay, ge_prof, ge_prof_alloc and every plugin target are installed and
-# published as ge::core, ge::fp, ge::isa, ge::assets, ge::ai, ge::wind, ge::water, ge::move,
-# ge::camera, ge::net, ge::console, ge::lab, ge::play, ge::replay, ge::prof, ge::prof_alloc and
-# ge::<plugin>, and the ge executable is installed to bin/
+# ge_core, ge_fp, ge_isa, ge_assets, ge_ai, ge_wind, ge_water, ge_move, ge_vfs, ge_camera, ge_net,
+# ge_console, ge_lab, ge_play, ge_replay, ge_prof, ge_prof_alloc and every plugin target are
+# installed and published as ge::core, ge::fp, ge::isa, ge::assets, ge::ai, ge::wind, ge::water,
+# ge::move, ge::vfs, ge::camera, ge::net, ge::console, ge::lab, ge::play, ge::replay, ge::prof,
+# ge::prof_alloc and ge::<plugin>, and the ge executable is installed to bin/
 # (cmake/Packaging.cmake, docs/publishing.md).
 cmake_minimum_required(VERSION 3.25)
 project(gameengine2 LANGUAGES CXX)
@@ -217,6 +218,12 @@ file(GLOB GE_MOVE_SOURCES CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/engine/m
 add_library(ge_move STATIC ${GE_MOVE_SOURCES})
 target_link_libraries(ge_move PUBLIC ge_core)
 
+# Content files (engine/vfs): the pack archive's checked directory and its files as views; the
+# rest of the virtual file system (search paths, zips, directories) lands with docs/goals.md M18a.
+file(GLOB GE_VFS_SOURCES CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/engine/vfs/*.cpp)
+add_library(ge_vfs STATIC ${GE_VFS_SOURCES})
+target_link_libraries(ge_vfs PUBLIC ge_core)
+
 # The camera (engine/camera, docs/camera.md): the pose, the followers, the subject, the rigs
 # (first person, boom, mounted, orbit, planted, free), the shake, the transitions and the stack.
 # No GPU and no platform: a game hands it a subject and the world's queries and gets a pose back
@@ -337,7 +344,7 @@ if(PROJECT_IS_TOP_LEVEL)
   get_property(GE_PLUGIN_TARGETS GLOBAL PROPERTY GE_PLUGIN_TARGETS)
   get_property(GE_GAME_TARGETS GLOBAL PROPERTY GE_GAME_TARGETS)
   add_executable(labs engine/lab/main.cpp ${GE_LAB_SOURCES})
-  target_link_libraries(labs PRIVATE ge_lab ge_play ge_replay ge_core ge_audio ge_assets ge_net ge_input ge_wind ge_water ge_move ge_camera ge_ui ${GE_PLUGIN_TARGETS} ${GE_GAME_TARGETS}
+  target_link_libraries(labs PRIVATE ge_lab ge_play ge_replay ge_core ge_audio ge_assets ge_net ge_input ge_wind ge_water ge_move ge_vfs ge_camera ge_ui ${GE_PLUGIN_TARGETS} ${GE_GAME_TARGETS}
     ${GE_LAB_EXTRA})
 
   # The `assets` executable (engine/assets/tool.hpp): the built assets listed, checked and stamped,

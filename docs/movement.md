@@ -95,6 +95,18 @@ whether the box started inside something. A brush map's clip hull, a heightfield
 colliders all answer it. `box_world.hpp` answers it for boxes, ramps and stairs (each a convex
 brush of planes, swept by pushing each plane out by the box's reach along its normal), which is
 what the labs and tests stand on and what a game prototypes on before its own world exists.
+`mesh_world.hpp` answers it for a level that is triangles (a room level's walls, a cave's grown
+rock): each triangle met by the swept separating-axis test against the box (the box's three axes,
+the triangle's normal and the nine crosses of its edges with the box's axes), so a box slides
+over an edge where the triangle really ends, never along the edge's extension; the triangles
+bucketed once in a uniform grid, a trace visiting each one once in the first covered cell it lies
+in, with nothing allocated. A triangle is solid on both sides and has no inside.
+
+**Keep the skin far under a step's creep.** A body stopped by a riser climbs it only when the
+lifted try of one step carries it more than the skin past where it stopped, and from rest that is
+`accelerate * wish * dt^2`: about 3 mm for the walker at 120 Hz. A world whose skin is larger
+than that (the box world's 1/32 L is 3 cm when L is a metre) leaves a walker stuck at the foot of
+a 10 cm sill; the room level's world keeps a millimetre.
 
 ## Knobs as cvars
 

@@ -5,6 +5,7 @@ army c3e9faa0202c9fc0
 army-flight 383c454be759df5d
 army-sleds bae04af32e36e808
 audition d47fda4a9cb22fbb
+bsp c267f2409a135822
 camera-follow b1dbf6ae474cba78
 camera-rigs bd01263b4d16d23c
 camera-shake 3d1734df5bafe175
@@ -12,6 +13,7 @@ camera-transitions 750b195eaca33076
 camera-world 663b2b2d72b24d8b
 charts 77f2319a5ea24272
 cli-loop 2a54afc4b75dac63
+clone 11dced82622fae3a
 console e8456b0db59560ce
 crowd cf02cf9a7c917783
 crowd-look 194a06db20f2ebb2
@@ -33,8 +35,8 @@ input-ffb 565464637bf28b86
 input-session dcb313b33f4ddf37
 input-shape e2284bbd066830af
 junctions 036999ca677e12e6
-lake cd671548fc72e5d6
 ladder 825b7f06d92b69d3
+lake cd671548fc72e5d6
 level 4fbff3da7a82c4aa
 lift-ride a374f35eb85cc161
 mapgen-cost 3baf51b6907817f3
@@ -65,6 +67,7 @@ replay-cut 1381f20bd27caa95
 replay-file b9f41fcd00bac8b3
 resort f82a1fca6fb6ba42
 ride c3794669e029f0c9
+rooms c9c0d8aa3cc86a49
 routes 739cf0534473b4f8
 run-clock 81607c7ac1161166
 shadows 5b0d6051c10638b4
@@ -72,7 +75,7 @@ sight 2c2aefbe619a6874
 sim a9c6d0f6bb29ce2a
 ski-cross fbe386cdba062259
 skier-swim aa7aa24c5ebdcc04
-skier-views 57f8a3b89b88b616
+skier-views a29c13a64a90d895
 skijump-hills 3fa0eff35ac0f70a
 slalom 2adb7c679ec93adf
 sled 30cd3df2c903518c

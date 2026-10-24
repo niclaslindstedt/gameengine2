@@ -31,12 +31,12 @@ set(GE_INSTALL_CMAKEDIR "${CMAKE_INSTALL_LIBDIR}/cmake/gameengine2")
 
 # target -> export name (consumers see ge::<export name>)
 set(GE_EXPORTED_TARGETS ge_fp fp ge_isa isa ge_core core ge_audio audio ge_assets assets ge_ui ui ge_ai ai
-  ge_wind wind ge_water water ge_net net ge_console console ge_input input ge_move move ge_camera camera ge_lab lab ge_prof prof ge_prof_alloc prof_alloc ge_play play
+  ge_wind wind ge_water water ge_net net ge_console console ge_input input ge_move move ge_vfs vfs ge_camera camera ge_lab lab ge_prof prof ge_prof_alloc prof_alloc ge_play play
   ge_replay replay)
 # Every plugin is published as ge::<plugin> (cmake/Plugins.cmake collects them), and its
 # presentation half as ge::<plugin>_app when every engine target it links is published here
 # (APP audio is; render, gpu and platform are not yet, below).
-set(GE_PUBLISHED_MODULES core audio assets ui ai wind water console input move camera lab prof play replay)
+set(GE_PUBLISHED_MODULES core audio assets ui ai wind water console input move vfs camera lab prof play replay)
 get_property(_ge_plugins GLOBAL PROPERTY GE_PLUGIN_TARGETS)
 foreach(_target IN LISTS _ge_plugins)
   get_property(_app_modules TARGET ${_target} PROPERTY GE_APP_MODULES)
