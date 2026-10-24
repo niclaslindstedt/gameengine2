@@ -95,6 +95,12 @@ One direction of dependency, held by `tools/check-agents.sh` once each layer exi
   with a responsive view. It depends on `engine/core` only and holds no GPU: the draw list is data,
   and the 2D pass in `engine/render` (M22b) draws the same commands. A menu never calls the game;
   it hands back events, so the game's state stays the game's and a menu replays from its inputs.
+- **`engine/texgen`**: procedural textures (`ge::texgen`, M31; `docs/textures.md` is the design):
+  a recipe an agent writes as text (`.tex`), its layers painted over float planes (colour,
+  height, roughness, metal, glow) in order, the maps derived off them, and the bake cached on
+  disk as PNG under a key of everything its bytes depend on, so a variant is baked once. Pure
+  functions of the recipe and the texture reference, deterministic to the bit; no platform, no
+  GPU. Links `ge_lab` for the PNG writer.
 - **`engine/move`**: character movement (`ge::move`, M28; `docs/movement.md` is the design): the
   knobs of a moving body and their names, preset rows (an arena shooter's, a platformer's, a
   walker's), one step over a swept-box trace callback the game answers with its own world, a box

@@ -1,0 +1,16 @@
+# Irregular paving slabs set in earth: a path, a cellar floor.
+texture flagstones
+size    512
+seed    17
+surface stone
+scale   3
+tags    floor stone path
+param   moss 0.3 0 1
+
+layer fill    color=#3e362c rough=0.95
+layer noise   kind=voronoi period=5 octaves=1 salt=1 color=#6a645a color2=#958c7e blend=mix amount=1
+layer noise   kind=edges period=5 octaves=1 salt=1 lo=0.02 hi=0.08 color=#3e362c color2=#ffffff blend=multiply amount=1 height=0.7
+layer noise   kind=perlin period=20 octaves=5 amount=0.3 blend=overlay height=0.1
+layer grime   amount=0.6
+layer moss    amount=$moss period=4
+layer dirt    amount=0.3 cavity=0.9

@@ -1,0 +1,15 @@
+# A mountain hut's stone wall in winter: snow on every ledge and in every joint.
+texture snowy_stone
+size    512
+seed    38
+surface stone
+scale   2.5
+tags    wall stone mountain winter
+param   snow 0.5 0 1
+
+layer bricks  rows=7 cols=3 offset=0.35 mortar=0.22 bevel=0.5 depth=0.6 color=#7d776e vary=0.25 mortar_color=#5e5a54
+layer noise   kind=ridged period=12 octaves=5 amount=0.4 blend=overlay height=0.15
+layer grime   amount=0.6 reach=0.015
+layer moss    amount=0.15
+layer snow    amount=$snow
+layer dust    amount=0.05

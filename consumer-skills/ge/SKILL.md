@@ -57,6 +57,9 @@ ge cvar get <name>...            # the named ones (an unknown name: the nearest 
 ge cfg check <file>... [--server]   # a cfg's problems at file:line, and names nothing reads
 ge cfg exec <file>... [--cmd=...]   # what a cfg changed and printed; ge cfg dump: a cfg to start from
 ge asset build [<name>]          # a model built in headless Blender off the game's data (skill: assets)
+ge texture kinds                 # every procedural texture layer kind and key (skill: textures)
+ge texture check <file.tex>...   # a texture recipe's mistakes, each at its line
+ge texture bake <file.tex> --ref="seed=12 wear=0.8"   # one variant to PNG maps in build/textures
 ge check                         # the whole gate: format, doctor, build, tests
 ge lint [--base=<ref>] [<file>...]  # clang-tidy's bug-finding checks over what the change reaches
 ge precheck [--preset=<p>]       # what CI runs, both presets: ge check, the pilot, the replays

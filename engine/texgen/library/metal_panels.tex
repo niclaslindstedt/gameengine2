@@ -1,0 +1,17 @@
+# Painted steel plates with rivets, the paint rubbed through at the edges.
+texture metal_panels
+size    512
+seed    5
+surface metal
+scale   2
+tags    metal wall industrial
+param   wear 0.4 0 1
+param   rust 0.2 0 1
+
+layer panels  rows=2 cols=2 color=#4f6a5a vary=0.05 metal=0 rough=0.5
+layer noise   kind=value period=32 octaves=4 amount=0.15 blend=overlay
+layer wear    amount=$wear color=#9aa0a6 metal=1 rough=-0.4
+layer scratches count=120 length=0.1 amount=0.4 color=#a8aeb4
+layer rust    amount=$rust
+layer grime   amount=0.5
+layer streaks amount=$rust count=20 length=0.35 color=#5a2c16

@@ -29,6 +29,7 @@ router's Skills table and the directories against each other.
 | `sim` | Fall Line's headless simulation: mapgen, the step, the bot, the run clock |
 | `platform` | SDL3: window, input, gamepad, audio device, files, focus |
 | `move` | Character movement: the knobs and presets, the step, strafe jumping, steps, slopes, crouch, the trace a world answers, the `move-*` labs |
+| `textures` | Procedural textures: the `.tex` recipe, the layer kinds, tileable noise, texture references, the bake and its cache, the `texgen-*` labs |
 | `input` | Input devices: keyboards, raw mice, gamepads, wheels and pedals, sticks, touch; actions, bindings, rebinding, feedback, the event log |
 | `camera` | The camera: poses, followers, the rigs (first person, boom, mounted, orbit, planted, free), shake and comfort, transitions, the stack, the camera labs |
 | `gpu` | The native GPU device over Dawn: device, feature tiers, resources, the pipeline manifest, WGSL |

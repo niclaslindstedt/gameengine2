@@ -1,0 +1,19 @@
+# A cave's wall: broken, faceted rock with damp in its hollows.
+texture cave_rock
+size    512
+seed    21
+surface stone
+scale   4
+tags    cave rock natural
+param   wet 0.3 0 1
+param   moss 0 0 1
+
+layer fill    color=#5d564d rough=0.9
+layer noise   kind=voronoi period=5 octaves=3 gain=0.6 color=#3a352f color2=#8a8175 blend=mix amount=0.7 height=0.8
+layer noise   kind=ridged period=4 octaves=6 warp=0.1 color=#2f2b27 color2=#9a9081 blend=overlay amount=0.5 height=0.5
+layer noise   kind=perlin period=32 octaves=4 amount=0.25 blend=overlay height=0.08
+layer cracks  amount=0.45 period=4 width=0.03 depth=0.3
+layer grime   amount=0.8 reach=0.02
+layer dirt    amount=$wet color=#1c1916 cavity=0.9 period=5
+layer moss    amount=$moss
+layer dust    amount=0.15 ledges=0.5 color=#9a9081
