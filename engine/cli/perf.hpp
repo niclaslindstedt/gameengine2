@@ -14,6 +14,13 @@
 //       what the run allocates: opening it, every step, and the steps after the first second that
 //       still allocate (a hot path that allocates is a warning naming its zone); the peak
 //       resident set
+//   ge load [--seeds=A,B] [--steps=N] [--paced=0|1] [--render] [-- options]
+//       how well the run uses the machine (engine/play/load.hpp): the pilot's run replayed with
+//       every thread's timeline and the OS sampler, its open and its steps each folded into
+//       each thread's work, spin and sleep shares, every OS thread's and core's CPU share, the
+//       threads working at once and each step's critical path, with findings (idle cores,
+//       threads that spin, unmarked threads, what bounds a step) and charts under runs/;
+//       --render also runs the game's `gpu-load` lab (the frame loop's threads and the GPU)
 //   ge leaks [--seeds=A,B] [--valgrind] [-- options]
 //       the pilot's run under the leak checker (the debug preset's sanitizers on Linux; valgrind's
 //       memcheck with --valgrind or where no sanitizer is built): each leak a finding at the
@@ -24,9 +31,9 @@
 // leaks run `play bench` (engine/play/bench.hpp) and write its series and spans files under
 // runs/ for `ge graph`.
 //
-// ge:summary ge bench, profile, mem and leaks: a game's step cost, its zones, its allocations
+// ge:summary ge bench, profile, mem, load and leaks: a game's step cost, zones, allocations, load
 // ge:keywords cli ge bench profile mem leaks benchmark hotspot allocations rss leak lsan valgrind
-// ge:keywords tag compare regression render-passes
+// ge:keywords tag compare regression render-passes load utilisation threads cores idle
 // ge:skill agent-interface perf
 // ge:test tests/cli_perf_test.cpp
 #pragma once
@@ -54,6 +61,15 @@ Outcome run_bench(const BuildOptions& o, const PerfOptions& p);
 Outcome run_profile(const BuildOptions& o, const PerfOptions& p);
 Outcome run_mem(const BuildOptions& o, const PerfOptions& p);
 Outcome run_leaks(const BuildOptions& o, const PerfOptions& p);
+
+struct LoadOptions {
+  std::string seeds, steps, paced, bin_ms;  // "" for the play executable's defaults
+  bool render = false;
+  std::vector<std::string> options;  // the game's, after --
+};
+Outcome run_load(const BuildOptions& o, const LoadOptions& l);
+// The reading of a `play load` answer (exposed for the tests).
+Outcome load_outcome(const BuildOptions& o, const play::FlatJson& m, const std::string& line);
 
 // The readings of a `play bench` answer (exposed for the tests). `before` is a tagged answer's
 // flat map or null.

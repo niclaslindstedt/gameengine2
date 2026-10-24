@@ -48,6 +48,7 @@ ge record --gpu --mode=<lit|wireframe|depth|overlay>  # the same through the gam
 ge bench [--tag=before | --compare=before]   # each step's time against its budget (skill: perf)
 ge profile [--render]            # where the step's (and the frame's) time goes, zone by zone
 ge mem | ge leaks                # what the run allocates; what it never frees
+ge load [--render]               # how the run spreads over the cores and the GPU: idle or busy
 ge graph <file>... [--kind=<k>]  # chart traces, benches, profiles: PNG + SVG, outliers as notes
 ge net inspect <pcap>            # a network capture, datagram by datagram (skill: multiplayer)
 ge net stats <pcap>              # per connection: kbps, round trip, loss, resends; charted

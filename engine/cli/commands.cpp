@@ -168,6 +168,15 @@ constexpr FlagSpec kProfileFlags[] = {
     kRepo};
 constexpr FlagSpec kMemFlags[] = {
     {"seeds", "<a,b,...>", "the seeds the pilot plays (default 1)"}, kSteps, kFast, kEngine, kRepo};
+constexpr FlagSpec kLoadFlags[] = {
+    {"seeds", "<a,b,...>", "the seeds the pilot plays (default 1)"},
+    {"steps", "<n>", "only the first this many steps of each run (default 1200)"},
+    {"paced", "<0|1>", "run each step at its slot on the wall clock, as a game's loop does (1)"},
+    {"bin-ms", "<ms>", "the busy chart's bin (default 10)"},
+    {"render", "", "also run the game's `gpu-load` lab: the frame loop's threads and the GPU"},
+    kFast,
+    kEngine,
+    kRepo};
 constexpr FlagSpec kLeakFlags[] = {
     {"seeds", "<a,b,...>", "the seeds the pilot plays (default 1)"},
     {"valgrind", "", "run under valgrind's memcheck instead of the sanitizers"},
@@ -479,6 +488,11 @@ const CommandSpec kCommands[] = {
      "what the run allocates: opening it, each step, the steps after the first second that "
      "still allocate and the zone they do it in; the peak resident set",
      kMemFlags, "ge mem --seeds=38", "perf"},
+    {"load", "", 0, 0, "measure",
+     "how well the run uses the machine: every thread's work, spin and sleep, every OS thread's "
+     "and core's CPU share, threads working at once, each step's critical path; charts and a "
+     "lanes file; --render adds the frame loop and the GPU",
+     kLoadFlags, "ge load --seeds=38 --render", "perf"},
     {"leaks", "", 0, 0, "measure",
      "the pilot's run under the leak checker (the debug build's sanitizers, or valgrind); each "
      "block never freed a finding at its first frame in the repo",
@@ -618,11 +632,11 @@ std::optional<std::string> check_args(const Args& a) {
   }
   static constexpr std::string_view kPassing[] = {"lab",     "lab diff", "lab sweep", "play",
                                                   "sim",     "shot",     "record",    "bench",
-                                                  "profile", "mem",      "leaks"};
+                                                  "profile", "mem",      "leaks",     "load"};
   if (!a.passthrough.empty() &&
       std::find(std::begin(kPassing), std::end(kPassing), c.name) == std::end(kPassing)) {
-    return "only ge lab, lab diff, lab sweep, play, sim, shot, record, bench, profile, mem and "
-           "leaks pass words after --";
+    return "only ge lab, lab diff, lab sweep, play, sim, shot, record, bench, profile, mem, "
+           "leaks and load pass words after --";
   }
   return std::nullopt;
 }

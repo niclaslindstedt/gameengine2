@@ -2,17 +2,20 @@
 // perf.hpp): a bench answer becomes a line a seed and, beside a tagged run, a warning on a step
 // that got slower past the noise; a profile lists every zone and notes a step with no zone; mem
 // warns on a hot path that allocates and names its zone; and a leak report, LeakSanitizer's or
-// valgrind's, becomes one finding a leak at its first frame inside the repo. Running them for
-// real on a scaffolded repo is the packaging workflow's `scaffold` job.
+// valgrind's, becomes one finding a leak at its first frame inside the repo; and a load answer
+// becomes each phase's shares and its findings as notes, with every chart it wrote listed. Running
+// them for real on a scaffolded repo is the packaging workflow's `scaffold` job.
 //
 // ge:summary Tests: the perf commands' readings of a bench answer and of a leak checker's report
-// ge:keywords test cli ge bench profile mem leaks compare regression lsan valgrind findings
+// ge:keywords test cli ge bench profile mem leaks load compare regression lsan valgrind findings
 // ge:skill agent-interface perf testing
 // ge:test tests/cli_perf_test.cpp
 #include <string>
 
 #include "check.hpp"
 #include "cli/perf.hpp"
+#include "play/load.hpp"
+#include "prof/zones.hpp"
 
 using namespace ge::cli;
 
@@ -143,4 +146,49 @@ TEST(a_leak_report_becomes_a_finding_at_its_first_frame_in_the_repo) {
   CHECK(vg.size() == 1 && vg[0].where == "play/game.cpp:61");
   CHECK(has(vg[0].what, "40 bytes in 1 block(s) definitely lost, allocated in open"));
   CHECK(leak_findings(repo(), "no leaks here\n").empty());
+}
+
+namespace {
+
+// A `play load` answer whose steps' analysis is a real one: main simulates, then waits on the
+// pool, on two hardware threads.
+std::string load_answer() {
+  namespace pf = ge::prof;
+  pf::Lane main{"main", 1, false, {}, 0};
+  main.slices = {{pf::zone_id_of("step"), pf::Act::work, 0, 0, 2'000'000},
+                 {pf::zone_id_of("wait for bands"), pf::Act::sleep, 0, 2'000'000, 2'000'000}};
+  pf::Lane pool{"pool 1", 2, false, {}, 0};
+  pool.slices = {{pf::zone_id_of("band"), pf::Act::work, 0, 2'000'000, 1'900'000}};
+  pf::LoadOptions lo;
+  lo.to_ns = 8'000'000;
+  lo.hardware_threads = 2;
+  const pf::Load steps = pf::analyze_load({main, pool}, {}, {{0, 8'000'000}}, lo);
+  const pf::Load open = pf::analyze_load({}, {}, {}, lo);
+  const std::string runs = (repo().repo / "runs").generic_string();
+  return "{\"game\":\"g\",\"hz\":120,\"paced\":true,\"runs\":[{\"seed\":38,\"steps\":1,"
+         "\"digest\":\"00000000000000ff\",\"same_digest\":true,\"open_ms\":12.5,"
+         "\"steps_ms\":8,\"open\":" +
+         ge::play::load_json(open) + ",\"run\":" + ge::play::load_json(steps) + ",\"files\":[\"" +
+         runs + "/g-38.lanes.tsv\",\"" + runs + "/g-38.load-steps-lanes.png\"]}]}";
+}
+
+}  // namespace
+
+TEST(a_load_says_each_phase_and_turns_its_findings_into_notes) {
+  const std::string line = load_answer();
+  const Outcome o = load_outcome(repo(), flat(line), line);
+  CHECK_MSG(has(o.text, "seed 38: the open 12.5 ms, 1 steps 8.0 ms paced"), o.text);
+  CHECK(has(o.text, "the steps:") && has(o.text, "pool 1"));
+  CHECK(o.written.size() == 2 && has(o.written[0], "runs/g-38.lanes.tsv"));
+  bool idle = false, bound = false;
+  for (const Finding& f : o.findings) {
+    CHECK(f.severity == Severity::note);
+    idle = idle || has(f.what, "seed 38, the steps: the marked threads worked");
+    bound = bound || has(f.what, "is bound by the main lane idle");
+  }
+  std::string all;
+  for (const Finding& f : o.findings) all += f.what + "\n";
+  CHECK_MSG(idle && bound, all);
+  CHECK(exit_of(o) == 0);
+  CHECK(has(o.next, "lanes"));
 }

@@ -63,6 +63,9 @@ void clear();
 std::string_view zone_name(uint32_t id);
 // The id of a zone name (registered on first use). GE_ZONE calls it once a site.
 uint32_t zone_id(const char* name);
+// The id of a name made at run time (read from a file): the name is copied and kept for the life
+// of the process, so a reader that interns a file's names keeps one copy a name.
+uint32_t zone_id_of(std::string_view name);
 
 // Folds `spans` into one row a zone name, in the order the names first appear.
 void totals(std::span<const Span> spans, std::vector<ZoneTotal>& out);

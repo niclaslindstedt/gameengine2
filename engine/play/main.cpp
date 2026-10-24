@@ -2,6 +2,7 @@
 //
 // ge:summary play_main: parses the play command line and prints each command's JSON answer
 // ge:keywords play main command-line describe sim replay state diverge bench shot png json why
+// ge:keywords load
 // ge:skill agent-interface
 // ge:test tests/play_session_test.cpp
 #include "play/main.hpp"
@@ -20,6 +21,7 @@
 #include "play/bench.hpp"
 #include "play/console_cmds.hpp"
 #include "play/human.hpp"
+#include "play/load.hpp"
 #include "play/record.hpp"
 #include "play/session.hpp"
 #include "play/why.hpp"
@@ -690,6 +692,55 @@ int bench_cmd(const GameSpec& spec, const Line& l, std::ostream& out) {
       << ",\"peak_rss_bytes\":" << prof::peak_rss_bytes() << ",\"runs\":[" << runs << "]}\n";
   return 0;
 }
+// `load`: the pilot plays each seed, then its log is replayed under the timeline (load.hpp).
+int load_cmd(const GameSpec& spec, const Line& l, std::ostream& out) {
+  LoadRunOptions o;
+  double v = 0;
+  if (!number_flag(l, "steps", static_cast<double>(o.most_steps), v)) {
+    return problem(out, 2, "--steps is not a number", "the command line", "pass --steps=1200");
+  }
+  o.most_steps = static_cast<int64_t>(v);
+  if (!number_flag(l, "paced", 1, v)) {
+    return problem(out, 2, "--paced is not 0 or 1", "the command line", "pass --paced=0");
+  }
+  o.paced = v != 0;
+  if (!number_flag(l, "bin-ms", static_cast<double>(o.bin_ms), v) || v < 1) {
+    return problem(out, 2, "--bin-ms must be at least 1", "the command line", "pass --bin-ms=10");
+  }
+  o.bin_ms = static_cast<int64_t>(v);
+  const auto out_it = l.flags.find("out");
+  const fs::path dir = out_it == l.flags.end() ? fs::path("runs") : fs::path(out_it->second);
+  std::vector<double> seeds;
+  std::string bad, error;
+  if (!seeds_of(l, seeds, bad)) {
+    return problem(out, 2, "--seeds holds `" + bad + "`, not a number", "the command line",
+                   "pass --seeds=38");
+  }
+  std::string runs;
+  for (const double seed : seeds) {
+    Setup setup;
+    if (!make_setup(spec, seed, options_of(l, {"seeds", "out", "steps", "paced", "bin-ms"}), setup,
+                    error)) {
+      return problem(out, 2, error, "the command line", "play describe lists the options");
+    }
+    auto p = pilot_run(spec, setup, error);
+    if (!p) return problem(out, 1, error, "seed " + core::num::to_string(seed), "fix the game");
+    const auto r = load_run(spec, p->log, o, dir, error);
+    if (!r) return problem(out, 1, error, "seed " + core::num::to_string(seed), "fix the game");
+    std::string files;
+    for (const std::string& f : r->files) files += std::string(files.empty() ? "" : ",") + quote(f);
+    runs += std::string(runs.empty() ? "" : ",") + "{\"seed\":" + core::num::to_string(seed) +
+            ",\"steps\":" + std::to_string(r->steps) + ",\"digest\":" + quote(hex64(r->digest)) +
+            ",\"same_digest\":" + (r->same_digest ? "true" : "false") +
+            ",\"open_ms\":" + core::num::to_fixed(r->open_ms, 3) +
+            ",\"steps_ms\":" + core::num::to_fixed(r->steps_ms, 3) +
+            ",\"open\":" + load_json(r->open) + ",\"run\":" + load_json(r->run) + ",\"files\":[" +
+            files + "]}";
+  }
+  out << "{\"game\":" << quote(spec.name) << ",\"hz\":" << core::num::to_string(spec.hz)
+      << ",\"paced\":" << (o.paced ? "true" : "false") << ",\"runs\":[" << runs << "]}\n";
+  return 0;
+}
 }  // namespace
 
 int play_main(int argc, char** argv, std::istream& in, std::ostream& out) {
@@ -722,14 +773,15 @@ int play_main(int argc, char** argv, std::istream& in, std::ostream& out) {
   if (l.op == "state") return state_cmd(*spec, l, out);
   if (l.op == "diverge") return diverge_cmd(*spec, l, out);
   if (l.op == "bench") return bench_cmd(*spec, l, out);
+  if (l.op == "load") return load_cmd(*spec, l, out);
   if (l.op == "shot") return shot_cmd(*spec, l, out);
   if (l.op == "why") return why_cmd(*spec, l, out);
   if (l.op == "record") return record_cmd(*spec, l, out);
   if (l.op == "cvar") return cvar_cmd(*spec, l.words, l.flags, out);
   if (l.op == "cfg") return cfg_cmd(*spec, l.words, l.flags, out);
   return problem(out, 2, "unknown command `" + l.op + "`", "the command line",
-                 "run describe, sim, replay, state, diverge, bench, shot, record, why, cvar or "
-                 "cfg, or no command for the protocol");
+                 "run describe, sim, replay, state, diverge, bench, load, shot, record, why, "
+                 "cvar or cfg, or no command for the protocol");
 }
 
 int play_main(int argc, char** argv) {

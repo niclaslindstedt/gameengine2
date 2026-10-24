@@ -298,6 +298,16 @@ Outcome run(const Args& a) {
     return run_record(build_options(a, "release"), a.words.empty() ? "" : a.words[0], args,
                       a.passthrough);
   }
+  if (name == "load") {
+    LoadOptions lo;
+    lo.seeds = flag_value(a, "seeds");
+    lo.steps = flag_value(a, "steps");
+    lo.paced = flag_value(a, "paced");
+    lo.bin_ms = flag_value(a, "bin-ms");
+    lo.render = has_flag(a, "render");
+    lo.options = a.passthrough;
+    return run_load(build_options(a, "release"), lo);
+  }
   if (name == "bench" || name == "profile" || name == "mem" || name == "leaks") {
     PerfOptions p;
     p.seeds = flag_value(a, "seeds");

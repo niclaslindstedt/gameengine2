@@ -1,0 +1,6 @@
+---
+type: Added
+title: The load monitor shows how a run spreads over the CPU and the GPU
+---
+
+`ge load --seeds=38` answers whether a run uses the machine or leaves it idle. It replays the pilot's run paced at the game's rate, records every thread's timeline, and samples the OS beside it (each thread's CPU time, each core's busy share). The answer covers the run's efficiency (its work over hardware threads times time), how many threads work at once, each frame's critical path (the main thread's own work, then each wait laid on the thread or GPU that ended it), the ideal frame with its work spread over every core, and findings that name what bounds the median frame. It draws charts: each thread's lanes, a busy heatmap of lanes, OS threads and cores, the threads at once, and each frame's critical path. `--render` adds the game's `gpu-load` lab, the frame loop drawn on the GPU with a `gpu` lane from the passes' timestamps. An engine thread names itself with `core::name_this_thread` and marks its work with `GE_WORK`, `GE_WAIT` and `GE_SPIN` (`prof/timeline.hpp`); the worker pool's bands and waits are recorded on their own. `ge graph` draws a lanes file as lanes. The engine's `load` lab runs the whole monitor over a synthetic frame loop.

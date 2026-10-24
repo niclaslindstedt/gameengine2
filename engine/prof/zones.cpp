@@ -7,6 +7,7 @@
 #include "prof/zones.hpp"
 
 #include <chrono>
+#include <deque>
 #include <mutex>
 #include <string>
 
@@ -32,6 +33,7 @@ Recording& rec() {
 struct Names {
   std::mutex lock;
   std::vector<const char*> names;
+  std::deque<std::string> copies;  // the names zone_id_of made: a deque never moves them
 };
 
 Names& names() {
@@ -117,6 +119,17 @@ uint32_t zone_id(const char* name) {
     if (std::string_view(n.names[i]) == name) return static_cast<uint32_t>(i);
   }
   n.names.push_back(name);
+  return static_cast<uint32_t>(n.names.size() - 1);
+}
+
+uint32_t zone_id_of(std::string_view name) {
+  Names& n = names();
+  const std::lock_guard<std::mutex> guard(n.lock);
+  for (size_t i = 0; i < n.names.size(); i++) {
+    if (std::string_view(n.names[i]) == name) return static_cast<uint32_t>(i);
+  }
+  n.copies.emplace_back(name);
+  n.names.push_back(n.copies.back().c_str());
   return static_cast<uint32_t>(n.names.size() - 1);
 }
 

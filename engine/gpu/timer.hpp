@@ -11,7 +11,7 @@
 //
 // ge:summary GPU time per pass from timestamp query pairs, read back a frame late
 // ge:keywords gpu timer timestamp timestamp-query query-set resolve gpu-ms per-pass profile
-// ge:keywords pass-timestamp-writes measurement
+// ge:keywords pass-timestamp-writes measurement start_ms gpu-timeline gaps
 // ge:skill gpu perf
 // ge:test tests/gpu_capture_test.cpp
 #pragma once
@@ -43,6 +43,9 @@ class PassTimer {
 
   // The last readings' time for pass `i`, ms; NaN when inert or not yet read.
   double ms(uint32_t i) const;
+  // When pass `i` began, ms after the first pass began, on the GPU's own clock (its gaps are the
+  // GPU's idle between passes; no offset to the CPU's clock is known); NaN as `ms`.
+  double start_ms(uint32_t i) const;
 
  private:
   wgpu::QuerySet queries_;
@@ -51,6 +54,7 @@ class PassTimer {
   // What the readback's callback writes: shared with it, so it outlives the timer.
   struct Readings {
     std::vector<double> ms;
+    std::vector<double> start_ms;
     bool pending = false;
   };
   std::shared_ptr<Readings> readings_ = std::make_shared<Readings>();

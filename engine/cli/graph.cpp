@@ -2,7 +2,7 @@
 // chart kit, write PNG and SVG, and return the outliers as findings.
 //
 // ge:summary ge graph's body: read, choose the charts, write PNG and SVG, findings
-// ge:keywords cli graph run_graph chart png svg
+// ge:keywords cli graph run_graph chart png svg lanes-file lanes_chart
 // ge:skill agent-interface debug
 // ge:test tests/cli_graph_test.cpp
 #include "cli/graph.hpp"
@@ -13,6 +13,7 @@
 #include "cli/json.hpp"
 #include "core/num_text.hpp"
 #include "lab/chart.hpp"
+#include "lab/load_chart.hpp"
 #include "lab/png.hpp"
 #include "lab/series.hpp"
 
@@ -157,10 +158,25 @@ Outcome run_graph(const GraphOptions& opts) {
                               "(engine/lab/series.hpp)"});
         continue;
       }
-      const gl::Chart timeline =
-          gl::span_chart({prefix + "TIMELINE OF " + f.stem, f.path, "", ""}, s.find("name")->cell,
-                         s.find("depth")->num, s.find("start_ns")->num, s.find("dur_ns")->num);
-      w.write(safe(f.stem) + ".timeline.spans", timeline);
+      std::vector<prof::Lane> lanes;
+      std::string why;
+      if (!s.get("lanes").empty() && gl::lanes_from_spans(s, lanes, why)) {
+        // A lanes file (every thread's timeline): its lanes and its threads at once.
+        const prof::Load load = prof::analyze_load(lanes, {}, {}, {});
+        w.write(
+            safe(f.stem) + ".lanes",
+            gl::lanes_chart({prefix + "EVERY THREAD OF " + f.stem, f.path, "t (ms)", "", 1280, 420},
+                            lanes, load, load.from_ns, load.to_ns, {}));
+        w.write(
+            safe(f.stem) + ".working",
+            gl::working_chart(
+                {prefix + "THREADS WORKING AT ONCE, " + f.stem, f.path, "", "", 960, 360}, load));
+      } else {
+        const gl::Chart timeline =
+            gl::span_chart({prefix + "TIMELINE OF " + f.stem, f.path, "", ""}, s.find("name")->cell,
+                           s.find("depth")->num, s.find("start_ns")->num, s.find("dur_ns")->num);
+        w.write(safe(f.stem) + ".timeline.spans", timeline);
+      }
       std::vector<std::string> order;
       std::vector<gl::Sample> mine;
       const auto& names = s.find("name")->cell;

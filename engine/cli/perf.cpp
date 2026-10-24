@@ -443,4 +443,74 @@ Outcome run_leaks(const BuildOptions& o, const PerfOptions& p) {
   return out;
 }
 
+Outcome load_outcome(const BuildOptions& o, const play::FlatJson& m, const std::string& line) {
+  Outcome out;
+  out.result = line;
+  std::string text;
+  for (int i = 0; i < runs_of(m); i++) {
+    const std::string seed = text_of(m, run_key(i, "seed"));
+    text += "  seed " + seed + ": the open " + fixed(num(m, run_key(i, "open_ms")), 1) + " ms, " +
+            text_of(m, run_key(i, "steps")) + " steps " + fixed(num(m, run_key(i, "steps_ms")), 1) +
+            " ms" + (text_of(m, "paced") == "true" ? " paced" : " back to back") + "\n";
+    for (const char* phase : {"open", "run"}) {
+      const std::string k = std::string(phase) + ".";
+      std::string body = text_of(m, run_key(i, k + "text"));
+      std::string indented;
+      for (const auto view : split_lines(body)) {
+        if (!view.empty()) indented += "    " + std::string(view) + "\n";
+      }
+      text += "  " + std::string(phase == std::string("open") ? "the open" : "the steps") + ":\n" +
+              indented;
+      for (int f = 0; m.contains(run_key(i, k + "findings." + std::to_string(f) + ".what")); f++) {
+        const std::string fk = k + "findings." + std::to_string(f) + ".";
+        out.findings.push_back({Severity::note,
+                                "seed " + seed + ", " +
+                                    (phase == std::string("open") ? "the open" : "the steps") +
+                                    ": " + text_of(m, run_key(i, fk + "what")),
+                                "seed " + seed, text_of(m, run_key(i, fk + "next"))});
+      }
+    }
+    for (int f = 0; m.contains(run_key(i, "files." + std::to_string(f))); f++) {
+      out.written.push_back(rel(o, text_of(m, run_key(i, "files." + std::to_string(f)))));
+    }
+    if (text_of(m, run_key(i, "same_digest")) != "true") check_digest(m, i, out);
+  }
+  out.text = text;
+  out.summary =
+      "how the run spreads over the machine: each thread's work, the cores, the "
+      "critical path";
+  out.next = "open the -lanes.png charts, or ge graph runs/<game>-<seed>.lanes.tsv";
+  return out;
+}
+
+Outcome run_load(const BuildOptions& o, const LoadOptions& l) {
+  Outcome out;
+  std::string args = " load" + q("--out=" + (o.repo / "runs").string());
+  if (!l.seeds.empty()) args += q("--seeds=" + l.seeds);
+  if (!l.steps.empty()) args += q("--steps=" + l.steps);
+  if (!l.paced.empty()) args += q("--paced=" + l.paced);
+  if (!l.bin_ms.empty()) args += q("--bin-ms=" + l.bin_ms);
+  for (const std::string& w : l.options) args += q(w);
+  play::FlatJson m;
+  std::string line;
+  if (!play_command(o, args, m, line, out)) return out;
+  Outcome load = load_outcome(o, m, line);
+  if (!l.render) return load;
+  // The frame loop: the game's `gpu-load` lab (its threads and the GPU while it draws).
+  LabOptions lab;
+  lab.id = "gpu-load";
+  Outcome frame = run_lab(o, lab);
+  if (exit_of(frame) != 0 || frame.result.find("\"report\":null") != std::string::npos) {
+    load.findings.push_back(
+        {Severity::note, "the game has no `gpu-load` lab, or it did not run", "labs/",
+         "ge add lab gpu-load --kind=bench and record its frame loop with prof/timeline.hpp "
+         "(skill: perf)"});
+    for (Finding& f : frame.findings) load.findings.push_back(std::move(f));
+    return load;
+  }
+  load.text += "  the frame loop (the gpu-load lab):\n" + frame.text;
+  load.result = json_obj({{"sim", line}, {"frame", frame.result}});
+  return load;
+}
+
 }  // namespace ge::cli

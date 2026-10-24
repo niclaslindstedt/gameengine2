@@ -94,3 +94,56 @@ build, ms a 1/60 s step with 8 workers asked (the one-thread time beside it):
 
 At the smallest grids the pool doubled the step; at 32² it was a wash within the container's
 noise (±5%, and wider at these sizes). Where: `engine/water/flow.cpp`.
+
+## The load monitor
+
+Does the run use the machine, or does most of it sit idle? `ge load --seeds=38` answers that for
+a game's run, and `ge load --render` adds its frame loop on the GPU (the game's `gpu-load` lab).
+The pieces:
+
+| Piece | What it records or works out | Where |
+| --- | --- | --- |
+| Thread names | Each engine thread names itself (`pool 1`, `sampler`). The OS sees `ge-pool-1`. The main thread keeps the process's name, so a thread that carries it is one a library started | `engine/core/thread_name.hpp` |
+| The timeline | A lane a thread: slices of work, spin and sleep (`GE_WORK`, `GE_SPIN`, `GE_WAIT`), nested by scope, written to the thread's own buffer without a lock. The worker pool's bands and waits are recorded through its listener, so a bake needs no line of its own | `engine/prof/timeline.hpp`, `engine/core/parallel.hpp` |
+| The OS sampler | Every thread's CPU time and every core's busy share, every few milliseconds, including threads the timeline never hears (the GPU driver's, a software rasterizer's) | `engine/prof/cpu_sampler.hpp` |
+| The analysis | Each lane's shares, how long exactly k threads worked at once, the efficiency (work over hardware threads × time), each frame's critical path (the main lane's own work, then each wait laid on the lane that ended it), the ideal frame (its work spread over every core, beside the GPU's), and findings | `engine/prof/load.hpp` |
+| The charts | The lanes, the busy heatmap, the threads at once and each frame's stacked path | `engine/lab/load_chart.hpp` |
+
+How to read the answer: the **efficiency** is the share of the machine the marked threads
+kept busy. The **OS efficiency** is the same share measured from the process's CPU time, so it
+includes spins and unmarked threads. A run whose OS efficiency is far above its efficiency has
+work the timeline does not see. The **frames' bound** names what the median frame spends most
+of its length on. When the **ideal** is well under the critical path, more threads or overlap
+could win that time back.
+
+### The GPU's lane, and the Mac
+
+The `gpu` lane is built from each frame's pass timestamps (`gpu/timer.hpp`'s `start_ms`) and
+placed at the frame's submit time on the CPU's clock, because the engine does not yet know the
+offset between the GPU's clock and the CPU's (M33b). On the container's software adapter
+(llvmpipe) the lane is named `gpu (software)`: its passes run on the CPU, as the rasterizer's
+unmarked threads, so their cost also shows in the CPU's numbers. That is an honest picture of
+the container, not of a GPU. On a hardware adapter, run:
+
+```sh
+make lab LAB=gpu-load PRESET=release ARGS="--frames=120"
+```
+
+Try CI's macOS runner (Metal) first. Use the Mac only for what that runner cannot show.
+
+### What it found first
+
+These were measured with the release build on the 4-core Linux x86-64 container, using the
+software adapter:
+
+| Run | Efficiency (marked threads) | Process CPU | Threads at once | What bounds the median frame |
+| --- | --- | --- | --- | --- |
+| `labs load` (the synthetic loop, 30 frames at 60 Hz) | 14.9% | 15.9% | 0.60 | the main lane idle, 8.7 of 16.9 ms; waits on the render thread 3.2 ms; ideal 3.9 ms |
+| `labs gpu-load`, the open (seed 38's map built) | 45.4% | 44.1% | 1.81 | 70% of the open on one thread, 25% on all four: the serial stages between the pool's bakes |
+| `labs gpu-load`, 60 frames of the bot's run | 0.6% | 69.2% | 0.03 | waiting on `gpu (software)`, 336 of 340 ms; the main lane works 1.0 ms; llvmpipe's four threads use 2.8 cores |
+| `ge load --seeds=38`, 1200 steps paced at 120 Hz | 0.0% | 0.2% | 0.00 | idle: a step is 13 µs of its 8.3 ms slot |
+
+On the container, then: the simulation leaves the CPU idle, the frame is all GPU, and the map's
+open is the one place the CPU's spread matters. There, about two thirds of the time runs on one
+thread. `ge load`'s open is short (0.8 ms) because the play contract reuses the map its pilot
+built, so the open's spread is measured by the `gpu-load` lab, which builds the map itself.

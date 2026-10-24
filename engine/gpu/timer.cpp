@@ -13,6 +13,7 @@ namespace ge::gpu {
 
 bool PassTimer::init(Device& device, std::string_view label, uint32_t passes) {
   readings_->ms.assign(passes, std::numeric_limits<double>::quiet_NaN());
+  readings_->start_ms.assign(passes, std::numeric_limits<double>::quiet_NaN());
   if (!device.features.has(Feature::timestamp_query) || passes == 0) return false;
   const std::string name(label);
   wgpu::QuerySetDescriptor qd{};
@@ -59,6 +60,8 @@ void PassTimer::request(Device&) {
           for (size_t i = 0; i < r->ms.size(); ++i) {
             r->ms[i] = t[i * 2 + 1] >= t[i * 2] ? static_cast<double>(t[i * 2 + 1] - t[i * 2]) / 1e6
                                                 : std::numeric_limits<double>::quiet_NaN();
+            r->start_ms[i] = t[i * 2] >= t[0] ? static_cast<double>(t[i * 2] - t[0]) / 1e6
+                                              : std::numeric_limits<double>::quiet_NaN();
           }
           buffer.Unmap();
         }
@@ -73,6 +76,11 @@ bool PassTimer::ready(Device& device) {
 
 void PassTimer::wait(Device& device) {
   if (readings_->pending) gpu::wait(device, future_);
+}
+
+double PassTimer::start_ms(uint32_t i) const {
+  return i < readings_->start_ms.size() ? readings_->start_ms[i]
+                                        : std::numeric_limits<double>::quiet_NaN();
 }
 
 double PassTimer::ms(uint32_t i) const {

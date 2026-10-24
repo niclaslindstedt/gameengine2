@@ -1,6 +1,6 @@
 // THE `play` EXECUTABLE: a game's play target is its GE_GAME file, its simulation and a `main`
 // that calls `play_main`. `ge play`, `ge sim`, `ge replay`, `ge state`, `ge diverge`, `ge shot`,
-// `ge bench`, `ge profile` and `ge mem` build it and run it; it can be run by hand too:
+// `ge bench`, `ge profile`, `ge mem` and `ge load` build it and run it; it can be run by hand too:
 //
 //   play [--stdio] [--seed=S] [--<option>=V] [--inputs=F]   the line protocol on stdin/stdout;
 //                                                           --inputs writes the log at the end
@@ -13,6 +13,10 @@
 //   play bench [--seeds=A,B | <log>...] [--repeats=5]       each step timed, per zone, with its
 //              [--steps=N] [--<option>=V] [--out=DIR]       allocations (bench.hpp); the series
 //                                                           and spans files in DIR
+//   play load [--seeds=A,B] [--steps=1200]                  how the run uses the machine
+//             [--paced=1] [--bin-ms=10] [--out=DIR]         (load.hpp): every thread's lanes,
+//                                                           the cores, the critical path; the
+//                                                           lanes, bins and charts in DIR
 //   play shot [<log> | --seed=S] [--step=N] [--view=V]      a still of the run at step N (the end
 //             [--<option>=V] [--out=DIR]                    by default): the view framed with its
 //                                                           caption band, a PNG in DIR
@@ -37,7 +41,7 @@
 // ge:summary The play executable's main: protocol, describe, sim, replay, state, diverge, bench
 // ge:summary shot, record and why
 // ge:keywords play main executable command-line describe sim replay state diverge bench
-// ge:keywords play_main why human record video cvar cfg
+// ge:keywords play_main why human record video cvar cfg load
 // ge:skill agent-interface
 // ge:test tests/play_session_test.cpp
 #pragma once

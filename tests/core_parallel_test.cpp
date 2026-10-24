@@ -1,22 +1,26 @@
 // engine/core/parallel.hpp: the bands cover every index once, in order, and a bake gives the
 // same bits on any number of workers; the pool takes calls back to back, a call from inside a
-// band, and calls from two threads at once.
+// band, and calls from two threads at once; its listener hears every band; its workers name
+// themselves (core/thread_name.hpp).
 //
 // ge:summary Test: core/parallel's bands, a bake's bits across worker counts, the pool's reentry
-// ge:keywords test parallel threads workers bands pool nested concurrent
+// ge:keywords test parallel threads workers bands pool nested concurrent listener thread-name
 // ge:skill testing
 #include "core/parallel.hpp"
 
 #include <algorithm>
 #include <atomic>
+#include <chrono>
 #include <cstdint>
 #include <mutex>
+#include <string>
 #include <thread>
 #include <utility>
 #include <vector>
 
 #include "check.hpp"
 #include "core/noise.hpp"
+#include "core/thread_name.hpp"
 
 namespace {
 
@@ -121,5 +125,68 @@ TEST(parallel_bakes_from_two_threads_at_once_are_the_same_bits) {
   for (size_t i = 0; i < one.size(); i++) {
     CHECK_BITS(a[i], one[i]);
     CHECK_BITS(b[i], one[i]);
+  }
+}
+
+namespace {
+std::atomic<int> g_begins{0}, g_ends{0}, g_waits{0}, g_wait_ends{0};
+void count_events(ge::core::PoolEvent e, bool) {
+  switch (e) {
+    case ge::core::PoolEvent::band_begin:
+      g_begins++;
+      break;
+    case ge::core::PoolEvent::band_end:
+      g_ends++;
+      break;
+    case ge::core::PoolEvent::spin_begin:
+    case ge::core::PoolEvent::sleep_begin:
+      g_waits++;
+      break;
+    case ge::core::PoolEvent::wait_end:
+      g_wait_ends++;
+      break;
+  }
+}
+}  // namespace
+
+// The listener hears every band begin and end, the same bits come out, and removing it stops it.
+TEST(parallel_listener_hears_every_band) {
+  const std::vector<double> one = bake(1);
+  g_begins = g_ends = 0;
+  ge::core::set_pool_listener(count_events);
+  const std::vector<double> many = bake(4);
+  ge::core::set_pool_listener(nullptr);
+  for (size_t i = 0; i < one.size(); i++) CHECK_BITS(many[i], one[i]);
+  if (ge::core::default_workers() > 1) {
+    CHECK(g_begins.load() == static_cast<int>(std::min<size_t>(4, 257)));
+    CHECK(g_ends.load() == g_begins.load());
+  }
+  const int heard = g_begins.load();
+  bake(4);
+  CHECK(g_begins.load() == heard);
+}
+
+// The pool's workers name themselves `pool N`; a thread's name and OS id are its own.
+TEST(parallel_workers_name_themselves) {
+  ge::core::name_this_thread("test main", false);
+  CHECK(ge::core::this_thread_name() == "test main");
+  const uint64_t me = ge::core::this_thread_os_id();
+  CHECK(me != 0);
+  std::mutex m;
+  std::vector<std::string> names;
+  std::vector<uint64_t> ids;
+  parallel_bands(64, 8, [&](size_t, size_t) {
+    // Long enough that the workers take bands too.
+    std::this_thread::sleep_for(std::chrono::milliseconds(2));
+    const std::lock_guard<std::mutex> lock(m);
+    names.push_back(ge::core::this_thread_name());
+    ids.push_back(ge::core::this_thread_os_id());
+  });
+  for (size_t i = 0; i < names.size(); i++) {
+    if (ids[i] == me) {
+      CHECK(names[i] == "test main");
+    } else {
+      CHECK(names[i].rfind("pool ", 0) == 0);
+    }
   }
 }

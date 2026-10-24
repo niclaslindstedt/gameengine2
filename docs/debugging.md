@@ -10,6 +10,7 @@ skill; this page is the design.
 | The log | Lines by simulation step on named channels | `engine/core/output.hpp` | `--log=<spec>` on any lab: `previews/<id>/log.txt` |
 | A trace | One row a step, frame or sample: a series file | `engine/lab/series.hpp` | a lab attaches it; `ge bench`, `ge profile`, `ge mem` write it |
 | A chart | A trace drawn, its outliers ringed: PNG and SVG | `engine/lab/chart.hpp`, `plot.hpp`, `stats.hpp` | a lab's shot; `ge graph <file>...` |
+| Lanes | Every thread's work, spin and sleep over time, and each frame's critical path: a SPANS file with a lane a thread | `engine/prof/timeline.hpp`, `load.hpp`, `engine/lab/load_chart.hpp` | `ge load` writes `runs/<game>-<seed>.lanes.tsv`; the `load` and `gpu-load` labs; `ge graph` |
 
 ## The log
 
@@ -113,6 +114,7 @@ ge graph runs/trace.tsv                                  # a line chart a column
 ge graph before.tsv after.tsv --columns=step_ms          # the same column of each, overlaid
 ge graph trace.tsv --kind=hist|box|heat|scatter          # a distribution, percentiles, a grid
 ge graph zones.tsv                                       # spans: a timeline and zone boxes
+ge graph runs/fall_line-38.lanes.tsv                     # lanes: a row a thread, threads at once
 ```
 
 The charts go to a `graphs/` directory beside the first file (`--out=` to choose), each a PNG and

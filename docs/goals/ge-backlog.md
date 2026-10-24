@@ -108,6 +108,9 @@ conflict. Milestone M12d in [`../goals.md`](../goals.md) takes these by group.
 - `ge bench --preset=release <lab>` (only the labs target built in release, for a lab's release-build cost without a whole release build)
 - a bench lab warns when the machine is loaded (load average over the cores: a concurrent ctest made thread starts look ten times slower)
 - `ge tsan <test>` (one test and its sources built with ThreadSanitizer, without a whole sanitizer preset)
+- `ge load --tag=<name>` / `--compare=<name>` (two load runs' efficiency, lanes' shares and the median frame's bound side by side, so a threading change proves what it spread)
+- `ge load --frame=<n>` (the lanes chart zoomed round one frame, the slowest by default, with its critical path as a table)
+- `ge load --live` (the load monitor over the game's own window as a player drives it, once the desktop game steps by hand: M19c)
 
 ## Hygiene
 

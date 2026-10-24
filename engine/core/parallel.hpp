@@ -16,12 +16,14 @@
 // ge:summary Runs a bake's independent rows in contiguous bands on a persistent worker pool
 // ge:keywords parallel threads workers bands rows bake parallel_bands default_workers
 // ge:keywords multithreading thread-pool pool persistent dispatch overhead
+// ge:keywords pool-listener set_pool_listener pool-event utilisation idle spin
 // ge:skill perf determinism
 // ge:test tests/core_parallel_test.cpp
 #pragma once
 
 #include <algorithm>
 #include <cstddef>
+#include <cstdint>
 #include <memory>
 #include <thread>
 #include <type_traits>
@@ -37,6 +39,17 @@ inline size_t default_workers() {
   const size_t n = std::thread::hardware_concurrency();
   return std::clamp<size_t>(n, 1, kMaxWorkers);
 }
+
+// What a pool thread tells the listener. A wait is a spin (the thread keeps its core) or a
+// sleep (it gives it back), and ends at `wait_end` (a spin that gives up and sleeps is ended by
+// its `sleep_begin`); `idle` says what it waited for: true, a worker
+// waiting for the next call; false, a caller waiting for the last band of its own.
+enum class PoolEvent : uint8_t { band_begin, band_end, spin_begin, sleep_begin, wait_end };
+using PoolListener = void (*)(PoolEvent event, bool idle);
+
+// Installs the listener (nullptr removes it), at any time: a listener installed mid-call hears
+// ends whose begins it missed, and ignores them.
+void set_pool_listener(PoolListener listener);
 
 namespace detail {
 

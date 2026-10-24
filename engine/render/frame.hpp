@@ -128,8 +128,9 @@ inline constexpr int kMaxPasses = 32;
 
 struct PassStat {
   std::string_view name;
-  double gpu_ms = 0;  // NaN when not measured
-  double cpu_ms = 0;  // encoding it: from its open to the next pass's (or the frame's end)
+  double gpu_ms = 0;        // NaN when not measured
+  double gpu_start_ms = 0;  // when it began on the GPU, after the frame's first pass; NaN as gpu_ms
+  double cpu_ms = 0;        // encoding it: from its open to the next pass's (or the frame's end)
   uint32_t draws = 0;
   uint32_t dispatches = 0;
 };
@@ -149,7 +150,8 @@ struct FrameRecorder {
   gpu::PassTimer timer;
   FrameStats stats;
   bool timed = false;
-  int64_t mark_ns = 0;  // when the last pass opened (begin_frame's time before the first)
+  int64_t mark_ns = 0;    // when the last pass opened (begin_frame's time before the first)
+  int64_t submit_ns = 0;  // the steady clock at after_submit: the frame's work handed to the GPU
 
   // Room for `passes` passes a frame.
   void init(gpu::Device& device, std::string_view label, int passes);

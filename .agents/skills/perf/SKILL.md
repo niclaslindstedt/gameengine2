@@ -41,6 +41,18 @@ The engine exists to be fast (G2). Speed is proven by measurement.
 - **The frame**: the game's `profile` lab: GPU and CPU ms per pass, the prepare's zones and the
   simulation's between frames, and `frames.tsv` a frame (`ge profile --render`, `make lab
   LAB=profile`).
+- **How the run uses the machine** (does most of the CPU sit idle, what holds a frame up): `ge
+  load --seeds=38` (`engine/play/load.hpp`) replays the pilot's run paced at the game's rate with
+  every thread's timeline (`engine/prof/timeline.hpp`: `GE_WORK`, `GE_WAIT`, `GE_SPIN`; the
+  worker pool's bands and waits are heard on their own) and the OS sampler beside it
+  (`prof/cpu_sampler.hpp`: each thread's CPU time, each core's busy share); `--render` adds the
+  game's `gpu-load` lab, the frame loop with a `gpu` lane. `prof/load.hpp` folds them into the
+  efficiency (work over hardware threads x time), the threads working at once, each frame's
+  critical path (its own work, then each wait laid on the lane that ended it) and the ideal (the
+  work spread perfectly); the findings say what bounds the median frame. Name every thread the
+  engine starts (`core::name_this_thread`) and mark its work, or it shows only as an unmarked
+  OS thread. On a software adapter the GPU's work is the rasterizer's CPU threads: real GPU
+  times need a real adapter (`docs/perf.md` § The load monitor).
 - An engine module's own cost: a `bench` lab (below), median of N runs (N ≥ 20), on an idle
   machine, back to back before and after.
 - In the GPU-less container (no `perf` there), callgrind ranks where the instructions go:

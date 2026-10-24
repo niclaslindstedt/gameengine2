@@ -1,6 +1,6 @@
 ---
 name: perf
-description: "Use to make this game faster or leaner, or to prove a change did not make it slower: ge bench (each step's time against its budget, --tag and --compare for a before and after), ge profile (where the step's time goes, zone by zone; --render for the frame's passes), ge mem (what the run allocates, and a hot path that still does), ge leaks (what is never freed), the GE_ZONE timing zones that feed them, and the series files ge graph draws."
+description: "Use to make this game faster or leaner, or to prove a change did not make it slower: ge bench (each step's time against its budget, --tag and --compare for a before and after), ge profile (where the step's time goes, zone by zone; --render for the frame's passes), ge mem (what the run allocates, and a hot path that still does), ge leaks (what is never freed), ge load (how the run spreads over the cores and the GPU, and what holds a frame up), the GE_ZONE timing zones that feed them, and the series files ge graph draws."
 ---
 
 # Performance
@@ -19,6 +19,7 @@ ge bench --compare=before                          # every number beside it; 10%
 ge profile [--seeds=1] [--render]                  # where the time goes, zone by zone
 ge mem [--seeds=1]                                 # what the run allocates, and where
 ge leaks [--seeds=1] [--valgrind]                  # what is never freed
+ge load [--seeds=1] [--render]                     # how the run uses the cores and the GPU
 ```
 
 The game's options go after `--` (`ge bench -- --rivals=3`), as for `ge sim`. bench, profile and
@@ -33,10 +34,15 @@ What each answers:
 | `ge profile` | each zone's calls a step, its own time and its share, the time in no zone, the five slowest steps and the zone that dominated each, the zones the open ran | the biggest share first; a step with much time in no zone needs more zones |
 | `ge mem` | allocations opening the run, over its steps, and the steps after the first second that still allocate; the peak resident set | a warning naming the zone a hot path allocates in |
 | `ge leaks` | every block never freed | one error a leak, at its first frame in this repo |
+| `ge load` | the run paced at its rate: every thread's work, spin and sleep, each OS thread's and core's busy share, the threads working at once, each frame's critical path and its ideal; `--render` adds the game's `gpu-load` lab (the frame loop and a `gpu` lane) | notes: most of the CPU idle, a thread spinning, busy threads nothing marks, what bounds the median frame |
 
 Each bench writes two files under `runs/` for `ge graph` and for reading:
 `<game>-<seed>.bench.tsv` (one row a step: its time, its allocations, each zone's time) and
 `<game>-<seed>.spans.tsv` (every zone round the slowest step: a timeline of who called what).
+`ge load` writes `<game>-<seed>.lanes.tsv` (every thread's slices: `ge graph` draws its lanes)
+and its charts beside it. A thread the game starts names itself (`ge::core::name_this_thread`)
+and marks its work with `GE_WORK("name")`, `GE_WAIT` and `GE_SPIN` (`prof/timeline.hpp`), or
+it shows only as an unmarked OS thread.
 
 ## Timing zones
 
