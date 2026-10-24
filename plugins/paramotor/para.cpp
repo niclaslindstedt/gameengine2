@@ -435,6 +435,32 @@ ParaState ready_para(const skier::SkierState& s) {
   return p;
 }
 
+ParaState aloft_para(skier::SkierState& s, double heading, double speed, double throttle) {
+  const double fx = lm::sin(heading);
+  const double fz = lm::cos(heading);
+  s.heading = heading;
+  s.vx = fx * speed;
+  s.vy = 0;
+  s.vz = fz * speed;
+  s.speed = speed;
+  s.on_snow = false;
+  ParaState p;
+  p.mode = ParaMode::flown;
+  p.heading = heading;
+  p.x = s.x;
+  p.y = s.y + spec::kHarness + spec::wing::kLines;
+  p.z = s.z;
+  p.vx = s.vx, p.vy = 0, p.vz = s.vz;
+  p.way = Vec3{fx, 0, fz};
+  p.airspeed = speed;
+  p.controls.throttle = throttle;
+  p.rpm = spec::engine::kIdle + (spec::engine::kFull - spec::engine::kIdle) * throttle;
+  p.flying = true;
+  p.flights = 1;
+  p.air_time = spec::launch::kFlight;
+  return p;
+}
+
 void drop_para(ParaState& p, const skier::SkierState& s, ParaCut cut, ParaEvents& events) {
   if (p.mode == ParaMode::dropped) return;
   p.mode = ParaMode::dropped;

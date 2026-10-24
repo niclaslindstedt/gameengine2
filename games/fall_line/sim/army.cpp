@@ -18,6 +18,7 @@
 #include "core/num.hpp"
 
 #include "fall_line/sim/army_heli.hpp"
+#include "fall_line/sim/army_para.hpp"
 #include "fall_line/sim/army_rules.hpp"
 #include "fall_line/sim/army_sled.hpp"
 #include "fall_line/sim/army_sled_rules.hpp"
@@ -543,6 +544,7 @@ void step_army(GameState& state) {
   if (home > 0) push(state, ArmyChange::home, home);
   step_army_sleds(state, on, q, roster.fire);
   step_army_helis(state, on, q);
+  step_army_paras(state, on, q);
   write_pursuers(state);
 }
 
@@ -579,7 +581,7 @@ uint64_t army_hash(const ArmyState& a, uint64_t h) {
   mix(a.wave_at);
   mix(a.marched);
   mix(a.arrested_by);
-  return army_helis_hash(a, army_sleds_hash(a, h));
+  return army_paras_hash(a, army_helis_hash(a, army_sleds_hash(a, h)));
 }
 
 const char* soldier_mode_name(SoldierMode m) {

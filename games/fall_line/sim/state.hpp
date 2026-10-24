@@ -88,6 +88,7 @@ enum class EventKind : uint8_t {
   gunfire,    // a round fired, into him, into the snow or a trunk, or past him (gunfire.hpp)
   hurt,       // injuries taken (`gate` how many this step, `value` the body's severity score after)
   died,       // the body gave out (`value` its severity score); his run is over
+  army_para,  // an army paramotor (`gate` its ArmyParaChange, `value` its id; army_para.hpp)
 };
 
 const char* event_name(EventKind kind);
@@ -184,6 +185,7 @@ struct FreeHeli {
   double t = 0;                        // s in this mode
   ge::helicopter::HeliControls flown;  // the controls of the last step flown
   int32_t taken = 0;                   // times boarded this run
+  bool army = false;  // the army's machine he took (army_steal.hpp): no pilot to fly it home
 };
 
 // THE FREE RIDE'S PARAMOTOR (para_ride.hpp): a free ride begun under it on the summit. The rig's

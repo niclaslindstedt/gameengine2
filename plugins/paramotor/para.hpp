@@ -36,7 +36,7 @@
 // ge:keywords paramotor para wing canopy lines polar stall surge brakes toggles speed-bar
 // ge:keywords throttle engine thrust launch takeoff landing speed-riding fold collapse crown
 // ge:keywords drop cut-away step_para ready_para drop_para para_hangs para_hash pilot-mass
-// ge:keywords acro dive swing-up loop tumble slack tangle tangled
+// ge:keywords acro dive swing-up loop tumble slack tangle tangled aloft_para aloft in-flight
 // ge:skill paramotor
 // ge:test tests/paramotor_scenarios_test.cpp
 #pragma once
@@ -155,6 +155,12 @@ double pilot_mass(const skier::SkiSpec& spec);
 // A rig ready on the skier: the wing held inflated over him, a little back of plumb, the engine
 // at idle.
 ParaState ready_para(const skier::SkierState& s);
+
+// A rig ALREADY FLYING over a pilot `s` put in the air: the wing plumb over his harness on its
+// lines, both of them on `heading` at `speed`, m/s, the engine at `throttle`. What a game brings a
+// paramotor onto the map with in flight (a pilot met aloft, not launched off the snow); `s` is
+// given the same velocity and taken off the snow.
+ParaState aloft_para(skier::SkierState& s, double heading, double speed, double throttle);
 
 // Whether the skier hangs in the harness (or falls tangled in the wing) this step: his skis do
 // nothing and the caller hands `step_skier` no input.

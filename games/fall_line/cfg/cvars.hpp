@@ -14,11 +14,15 @@
 //   sv_weather sv_snowfall sv_fog sv_wind sv_winddir sv_cover sv_skyrate
 //                                       the sky over the run, picked by hand, and how fast its
 //                                       hour runs (the server's, server info; sim/sky.hpp)
+//   sv_lethal sv_armyfire sv_helis sv_paras
+//                                       the hunt: whether the army shoots to kill, fires at all,
+//                                       and sends its helicopters and paramotors (the server's)
 //
-// ge:summary Fall Line's cvars: the window, the picture, the camera, the sound, the map
+// ge:summary Fall Line's cvars: the window, the picture, the camera, the sound, the map, the hunt
 // ge:keywords fall-line cvars settings cfg vid_width r_taa r_bloom r_shadowsize cl_view volume
 // ge:keywords s_mute sv_seed sv_hour add_cvars register_cvars sv_weather sv_snowfall sv_fog
-// ge:keywords sv_wind sv_winddir sv_cover sv_skyrate r_clouds
+// ge:keywords sv_wind sv_winddir sv_cover sv_skyrate r_clouds sv_lethal sv_armyfire sv_helis
+// ge:keywords sv_paras hunt army
 // ge:skill console sim
 // ge:test tests/fall_line_cvars_test.cpp
 #pragma once
@@ -56,6 +60,11 @@ struct Settings {
   double air = -1, air_from = -1;  // the mean wind, m/s at 10 m; the heading it blows from, deg
   double cover = -1;               // the broken sky's cloud cover, 0..1
   double sky_rate = 0;             // the sky's hours per hour of the run (0: the hour stands)
+  // The hunt (sim/hunt_cfg.hpp hands them to a run's wanted level and army).
+  bool lethal = true;  // the army shoots to kill; off, it chases him down and arrests him
+  bool army_fire = true;
+  bool helis = true;
+  bool paras = true;
 };
 
 // Every cvar above, bound to `s`'s fields (which take the defaults now).

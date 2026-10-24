@@ -18,6 +18,11 @@
 //   machine's pilot takes it after a beat (`kHomeBeat`) and flies it home to its pad at
 //   `kHomeClear` m over the snow; landed, he shuts down where it stands.
 // - HOME: set down within `kHomeNear` m of its pad, the pilot shuts down (`home`).
+// - AN ARMY MACHINE TAKEN (`take_heli`, from `army_steal.hpp`): the free ride's helicopter becomes
+//   the set-down army machine he took at its pilot's door, stood where it stood with its rotor
+//   turning
+//   (`FreeHeli::army`), and he is boarded on it; nobody flies it home. `crash_heli` wrecks the one
+//   he is flying with its way, as a ram does.
 // - THE CRASH (helicopter/heli.hpp's judgement: a hard landing, the rotor's tips, the airframe, a
 //   crown): a `heli` event, `crash`, the machine down where it struck; the skier on its skid thrown
 //   off by the blast (`kBlastOut`, `kBlastUp`; a `wipeout`). Once he is stood up (the run's down
@@ -133,6 +138,15 @@ inline bool on_heli(const GameState& state, int32_t i) {
 // ride started again from the pad with him sat on a fresh machine. False when it has nothing of
 // his (the free ride's own reset is the caller's).
 bool restart_heli(GameState& state, int32_t i);
+
+// A MACHINE TAKEN FROM THE ARMY (army_steal.hpp): the free ride's helicopter made the one standing
+// at (x, z) facing `heading`, its rotor at `spool` (0..1), with racer `i` sat on it. It has no
+// pilot of its own (`FreeHeli::army`); once wrecked, or he is set back on the pad, the free
+// ride's own machine waits on its pad again.
+void take_heli(GameState& state, int32_t i, double x, double z, double heading, double spool);
+
+// RAMMED (army_steal.hpp): the free ride's helicopter crashes where it is, as into the snow.
+void crash_heli(GameState& state, int32_t i);
 
 const char* heli_phase_name(HeliPhase p);
 

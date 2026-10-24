@@ -1,5 +1,6 @@
 // Fall Line's cvars: every one registered, bound to its Settings field, a cfg's values reaching
-// the struct (and the frame's options), the tiers right (sv_ the server's, r_ latched).
+// the struct (and the frame's options), the tiers right (sv_ the server's, r_ latched), the
+// hunt's server cvars handed to a run (sim/hunt_cfg.hpp).
 //
 // ge:summary Tests Fall Line's cvars: names, defaults bound to Settings, a cfg reaching the struct
 // ge:keywords test fall-line cvars settings add_cvars latch
@@ -7,6 +8,7 @@
 #include "check.hpp"
 #include "console/cfg.hpp"
 #include "fall_line/cfg/cvars.hpp"
+#include "fall_line/sim/hunt_cfg.hpp"
 
 namespace con = ge::console;
 using fall_line::cfg::Settings;
@@ -47,4 +49,25 @@ TEST(a_client_cannot_pick_the_map) {
   fall_line::cfg::add_cvars(c, s);
   c.execute("sv_seed 7");
   CHECK(s.seed == 38 && c.problems().size() == 1);
+}
+
+TEST(the_hunts_server_cvars_reach_a_run) {
+  con::Console c;
+  Settings s;
+  fall_line::cfg::add_cvars(c, s);
+  fall_line::sim::GameState st;
+  fall_line::sim::apply_hunt(s, st);
+  CHECK(st.wanted.lethal && st.army.fire && st.army.send_helis && st.army.send_paras);
+  c.execute("sv_lethal 0; sv_armyfire 0; sv_helis 0; sv_paras 0");
+  CHECK(c.problems().empty());
+  fall_line::sim::apply_hunt(s, st);
+  CHECK(!st.wanted.lethal && !st.army.fire && !st.army.send_helis && !st.army.send_paras);
+}
+
+TEST(a_client_cannot_change_the_hunt) {
+  con::Console c(false);
+  Settings s;
+  fall_line::cfg::add_cvars(c, s);
+  c.execute("sv_lethal 0; sv_paras 0");
+  CHECK(s.lethal && s.paras && c.problems().size() == 2);
 }

@@ -1,11 +1,11 @@
 # each 15 s: state digest, rounds fired, rounds into him, his injury severity score, the hunt (fall_line_gunfire_test, the seed 38 hunt at four stars for 150 s)
-ef82cbfe1dcb40af 0 0 0 running
-7d88a26f96c1441e 3 0 0 running
-440d1e2c9206dcbd 44 0 0 running
-2311056f2d0aeb58 104 1 25 killed
-9b2000c1c51ef717 104 1 25 killed
-34730a4dcf8bba28 104 1 25 killed
-85bb0339c0b80adb 104 1 25 killed
-f1f17d180f795515 104 1 25 killed
-44e4503f881135f3 104 1 25 killed
-1dacf65673ae0f97 104 1 25 killed
+626680b2e9ec16f5 0 0 0 running
+c57effe50e759066 3 0 0 running
+5b2e51efd984dfd5 44 0 0 running
+eae2f25a1ff5a758 104 1 25 killed
+7a541c095aad6def 104 1 25 killed
+86eebbc8af9b5828 104 1 25 killed
+9dafbd44bb1afedb 104 1 25 killed
+6dc20a46bd4aec15 104 1 25 killed
+534f6a73fe8f60f3 104 1 25 killed
+51162ec4fdc5a097 104 1 25 killed

@@ -17,12 +17,19 @@
 // are lost and it flies home over the edge), `fast` (moved across the map at 35 m/s on open snow,
 // one star: the machine flies in echelon off his tail, its `station` decision read off a trace).
 //
-// A scenario that never sees what it stages (no landing, no rope, no pick-up, no machine home, no
-// echelon) is a failure (exit 1).
+// TAKEN AND DOWNED (army_steal.hpp): `steal` (the open spot, three stars: the first machine set
+// down taken at its pilot's door, flown up 60 m and let go of) and `ram` (the free ride's machine
+// flown into the first machine hunting him): the taken-and-downed table (when the machine was set
+// down, taken or rammed, the stars after, when his machine and theirs came down, how long theirs
+// fell, when the free ride's own was back on its pad), a picture each of the paths and the wrecks,
+// and the rammed machine's fall as a chart.
 //
-// ge:summary Lab: the army's helicopters on seed 38: the call, the circle, the drop, the rope, home
+// A scenario that never sees what it stages (no landing, no rope, no pick-up, no machine home, no
+// echelon, no machine taken or rammed, nothing down on the snow) is a failure (exit 1).
+//
+// ge:summary Lab: the army's helicopters on seed 38: the circle, the drop, home, taken, rammed
 // ge:keywords lab army helicopter army-heli pylon-turn orbit echelon search landing fast-rope
-// ge:keywords leapfrog pick-up home paths scenario why station
+// ge:keywords leapfrog pick-up home paths scenario why station steal ram wreck fall
 // ge:skill sim labs
 // ge:test tests/fall_line_army_heli_test.cpp
 #include <memory>
@@ -38,13 +45,19 @@
 #include "fall_line/sim/army_heli.hpp"
 #include "fall_line/sim/army_heli_rules.hpp"
 #include "fall_line/sim/army_land.hpp"
+#include "fall_line/sim/army_steal.hpp"
+#include "fall_line/sim/army_steal_rules.hpp"
 #include "fall_line/sim/free.hpp"
 #include "fall_line/sim/game.hpp"
+#include "fall_line/sim/heli_ride.hpp"
 #include "fall_line/sim/wanted.hpp"
+#include "helicopter/spec.hpp"
+#include "lab/chart.hpp"
 #include "lab/lab.hpp"
 #include "lab/raster.hpp"
 #include "mountain/labs/level_map.hpp"
 #include "mountain/mapgen/generate.hpp"
+#include "skier/body.hpp"
 #include "skier/skier.hpp"
 
 namespace {
@@ -296,6 +309,230 @@ Hunt run_scene(const std::shared_ptr<const mg::Level>& level, Scene scene, doubl
   return h;
 }
 
+// TAKEN AND BROUGHT DOWN (army_steal.hpp), on the open spot at three stars with the army's guns
+// silent: `steal` takes the first machine set down at its pilot's door, climbs 60 m in it and lets
+// go; `ram` boards the free ride's machine on its pad and flies it level with the first machine
+// hunting him, its disc at theirs, closing at 10 m/s (the hands held by the lab), then waits for
+// the wreck.
+enum class Taking : uint8_t { steal, ram };
+
+struct Taken {
+  fs::Spot q;
+  double set = -1;                           // the first machine set down, s
+  double took = -1;                          // taken, or rammed, s
+  int32_t stars = 0;                         // the stars just after
+  double crashed = -1;                       // his machine down, s
+  double down = -1;                          // theirs on the snow, s
+  double back = -1;                          // the free ride's own on its pad again, s
+  std::vector<std::vector<fs::Spot>> paths;  // the army's machines', by id
+  std::vector<fs::Spot> his;                 // his machine's, while he or nobody flew it
+  std::vector<fs::Spot> wrecks;              // his machine's and theirs, where each came down
+  std::vector<double> fall_t, fall_h;        // the rammed machine's height over the snow, by time
+};
+
+Taken run_taking(const std::shared_ptr<const mg::Level>& level, Taking how, double limit) {
+  fs::GameState st = fs::create_free_ride(level, 0);
+  st.army.fire = false;
+  Taken k;
+  fs::Spot at = open_spot(st);
+  st.racers[0].skier = ge::skier::stand_skier(st.world(), at.x, at.z, 0, 0);
+  fs::set_wanted(st, 3);
+  k.q = fs::quarry_of(st);
+  fs::Controls c{};
+  int32_t target = -1;
+  bool stand = true;
+  bool placed = false;
+  double let_go = -1;
+  while (st.t < limit) {
+    fs::WantedState& w = st.wanted;
+    if (w.ended == fs::WantedEnd::running && w.heat < 3) w.heat = 3;
+    if (stand) st.racers[0].skier = ge::skier::stand_skier(st.world(), at.x, at.z, 0, 0);
+    st.racers[0].body = ge::skier::BodyState{};
+    c = fs::Controls{};
+    ge::helicopter::HeliState& b = st.heli.body;
+    if (how == Taking::steal && k.took < 0) {
+      for (const fs::ArmyHeli& m : st.army.helis) {
+        if (m.mode != fs::ArmyHeliMode::set || k.set >= 0) continue;
+        k.set = st.t;
+        const fs::Spot d = fs::pilot_door(m);
+        at = {d.x, d.y, d.z};
+      }
+      c.machine = k.set >= 0;
+    } else if (how == Taking::steal && let_go < 0) {
+      stand = false;
+      c.lever = 0.85;
+      if (b.y - level->ground_at(b.x, b.z) >= 60) {
+        c.machine = true;
+        let_go = st.t;
+      }
+    }
+    if (how == Taking::ram && target < 0) {
+      for (const fs::ArmyHeli& m : st.army.helis) {
+        if (m.mode != fs::ArmyHeliMode::hunt || !m.on || target >= 0) continue;
+        target = m.id;
+        const ge::core::Vec3 s = fs::heli_seat(b);
+        at = {s.x, s.y, s.z};
+        st.racers[0].skier = ge::skier::stand_skier(st.world(), at.x, at.z, 0, 0);
+        c.machine = true;
+        stand = false;
+      }
+    } else if (how == Taking::ram && k.took < 0) {
+      for (const fs::ArmyHeli& m : st.army.helis) {
+        if (m.id != target) continue;
+        if (!placed) {
+          // Boarded on its pad last step: put 20 m off their side, level with their disc.
+          placed = true;
+          b.x = m.x + lm::cos(m.heading) * 20;
+          b.z = m.z - lm::sin(m.heading) * 20;
+          b.heading = m.heading;
+          b.spool = 1;
+          b.grounded = false;
+        }
+        const double d = hypot(m.x - b.x, m.z - b.z);
+        b.y = m.y + fs::army_steal::kHubM - ge::helicopter::spec::rotor::kHub;
+        b.vy = 0;
+        b.vx = m.vx + (m.x - b.x) / d * 10;
+        b.vz = m.vz + (m.z - b.z) / d * 10;
+      }
+      c.lever = 0.6;
+    }
+    fs::step(st, std::span<const fs::Controls>(&c, 1));
+    for (const fs::GameEvent& e : st.events) {
+      if (e.kind == fs::EventKind::heli) {
+        const auto ph = static_cast<fs::HeliPhase>(e.gate);
+        if (ph == fs::HeliPhase::crash && k.crashed < 0) {
+          k.crashed = st.t;
+          k.wrecks.push_back({b.x, b.y, b.z});
+        }
+        if (ph == fs::HeliPhase::restart && k.crashed >= 0 && k.back < 0) k.back = st.t;
+      }
+      if (e.kind != fs::EventKind::army_heli) continue;
+      const auto ch = static_cast<fs::ArmyHeliChange>(e.gate);
+      if ((ch == fs::ArmyHeliChange::stolen || ch == fs::ArmyHeliChange::rammed) && k.took < 0) {
+        k.took = st.t;
+        k.stars = st.wanted.stars;
+      }
+      if (ch == fs::ArmyHeliChange::down && k.down < 0) k.down = st.t;
+    }
+    for (const fs::ArmyHeli& m : st.army.helis) {
+      if (m.mode == fs::ArmyHeliMode::fall || (m.mode == fs::ArmyHeliMode::wreck && m.t < 3)) {
+        k.fall_t.push_back(st.t);
+        k.fall_h.push_back(m.y - level->ground_at(m.x, m.z));
+      }
+      if (m.mode == fs::ArmyHeliMode::wreck && m.t <= fs::kDt) k.wrecks.push_back({m.x, m.y, m.z});
+    }
+    if (st.steps % static_cast<int64_t>(fs::kHz / 2) == 0) {
+      for (const fs::ArmyHeli& m : st.army.helis) {
+        if (m.mode == fs::ArmyHeliMode::due) continue;
+        const auto id = static_cast<size_t>(m.id);
+        if (k.paths.size() <= id) k.paths.resize(id + 1);
+        k.paths[id].push_back({m.x, m.y, m.z});
+      }
+      if (st.heli.army || (how == Taking::ram && k.crashed < 0 && target >= 0)) {
+        k.his.push_back({b.x, b.y, b.z});
+      }
+    }
+    if (k.down >= 0 && st.t > k.down + 5 && (how == Taking::ram || k.back >= 0)) break;
+  }
+  return k;
+}
+
+void run_takings(ge::lab::Lab& lab, const std::shared_ptr<const mg::Level>& level, double limit,
+                 int px, bool pictures, double seed) {
+  ge::lab::LabTable table{"taken and downed",
+                          {"scenario", "set s", "taken s", "stars", "his down s", "theirs down s",
+                           "fell s", "pad again s"},
+                          {}};
+  const auto opt = [](double v, int d) { return v >= 0 ? fixed(v, d) : std::string("-"); };
+  const double view = 1600;
+  for (const Taking how : {Taking::steal, Taking::ram}) {
+    const std::string id = how == Taking::steal ? "steal" : "ram";
+    const Taken k = run_taking(level, how, limit);
+    const double fell = how == Taking::ram && k.down >= 0 ? k.down - k.took : -1;
+    table.rows.push_back({id, opt(k.set, 2), opt(k.took, 2), std::to_string(k.stars),
+                          opt(k.crashed, 2), opt(k.down, 2), opt(fell, 2), opt(k.back, 2)});
+    lab.metric(id + ".taken", k.took, "s");
+    lab.metric(id + ".stars", k.stars, "stars");
+    lab.metric(id + ".down", k.down, "s");
+    const std::string look = "Look at previews/army-flight/" + id + ".png; read ";
+    if (k.took < 0 || k.stars < (how == Taking::steal ? 4 : 3)) {
+      lab.fail(id + ": no machine " + (how == Taking::steal ? "taken" : "rammed") + " within " +
+                   fixed(limit, 0) + " s, or the stars not raised",
+               look +
+                   "steal_army_heli and ram_army_helis in games/fall_line/sim/army_steal.cpp "
+                   "(skill: sim).");
+    }
+    if ((how == Taking::steal ? k.crashed : k.down) < 0) {
+      lab.fail(id + ": " + (how == Taking::steal ? "the machine let go of" : "the rammed machine") +
+                   " never came down on the snow",
+               look +
+                   "step_downed_heli in games/fall_line/sim/army_steal.cpp and the taken "
+                   "machine's home in heli_ride.cpp (skill: sim).");
+    }
+    if (!pictures) continue;
+    const double k_px = px / view;
+    const double x0 = ge::core::clamp(k.q.x - view / 2, 0.0, level->size - view);
+    const double z0 = ge::core::clamp(k.q.z - view / 2, 0.0, level->size - view);
+    ge::lab::Picture pic = ge::lab::create_picture(px, px, Rgba{0, 0, 0});
+    ge::lab::blit(pic, ge::mountain::labs::draw_map(*level, static_cast<int>(level->size * k_px)),
+                  static_cast<int>(-x0 * k_px), static_cast<int>(-z0 * k_px));
+    const auto sx = [&](double x) { return (x - x0) * k_px; };
+    const auto sz = [&](double z) { return (z - z0) * k_px; };
+    for (size_t i = 0; i < k.paths.size(); i++) {
+      const Rgba c = kPathColours[i % std::size(kPathColours)];
+      for (size_t j = 1; j < k.paths[i].size(); j++) {
+        ge::lab::draw_line(pic, sx(k.paths[i][j - 1].x), sz(k.paths[i][j - 1].z),
+                           sx(k.paths[i][j].x), sz(k.paths[i][j].z), c, 2);
+      }
+    }
+    for (size_t j = 1; j < k.his.size(); j++) {
+      ge::lab::draw_line(pic, sx(k.his[j - 1].x), sz(k.his[j - 1].z), sx(k.his[j].x),
+                         sz(k.his[j].z), kMen, 3);
+    }
+    for (const fs::Spot& w : k.wrecks) {
+      ge::lab::draw_ring(pic, sx(w.x), sz(w.z), 7, Rgba{255, 40, 40});
+      ge::lab::fill_disc(pic, sx(w.x), sz(w.z), 4, Rgba{255, 40, 40});
+    }
+    ge::lab::fill_disc(pic, sx(k.q.x), sz(k.q.z), 5, Rgba{255, 0, 255});
+    lab.shot({id,
+              "SEED " + fixed(seed, 0) + " ARMY HELICOPTER " +
+                  (how == Taking::steal ? "TAKEN" : "RAMMED"),
+              "The ground round the man hunted (magenta dot), " + fixed(view, 0) +
+                  " m across from above, at three stars with the army's guns silent: every army "
+                  "machine's path (a colour a machine), his machine's in white, and every wreck "
+                  "on the snow, his or theirs (red). " +
+                  (how == Taking::steal
+                       ? "He takes the first machine set down at its pilot's door, climbs 60 m in "
+                         "it and lets go: with no pilot it comes down."
+                       : "He flies the free ride's machine into the first machine hunting him: "
+                         "theirs falls spinning, his crashes."),
+              how == Taking::steal
+                  ? "a machine's path ending where it set down near the magenta dot, the white "
+                    "path starting there and ending at a red wreck"
+                  : "the white path meeting a coloured one, and a red wreck under where they met",
+              {{"seed", fixed(seed, 0)}, {"scenario", id}, {"stars", "3"}}},
+             pic);
+    if (how != Taking::ram || k.fall_t.empty()) continue;
+    ge::lab::LineChart lc;
+    lc.frame = {"the rammed machine's height over the snow", "seed " + fixed(seed, 0), "t (s)",
+                "height over the snow (m)"};
+    lc.spikes = false;
+    lc.traces.push_back({"rammed machine", k.fall_t, k.fall_h});
+    if (k.down >= 0) lc.marks.push_back({k.down, "on the snow"});
+    const ge::lab::Chart ch = ge::lab::line_chart(lc);
+    lab.note(ge::lab::chart_text(ch, 2));
+    lab.shot({"ram-fall",
+              "SEED " + fixed(seed, 0) + " THE RAMMED MACHINE'S FALL",
+              "The rammed army machine's skid datum's height over the snow under it from the "
+              "ram until it lies on the snow, its tail rotor gone, spinning.",
+              "a curve that steepens as it falls (gravity's share, the way bled off) and ends "
+              "at 0 at the mark",
+              {{"seed", fixed(seed, 0)}}},
+             ge::lab::to_picture(ch.plot));
+  }
+  lab.table(std::move(table));
+}
+
 void run(ge::lab::Lab& lab) {
   const double seed = lab.arg_num("seed");
   const auto version = static_cast<int>(lab.arg_num("version"));
@@ -411,6 +648,7 @@ void run(ge::lab::Lab& lab) {
         pic);
   }
   lab.table(std::move(table));
+  run_takings(lab, level, limit, px, pictures, seed);
 }
 
 const ge::lab::LabSpec kSpec{
@@ -422,7 +660,8 @@ const ge::lab::LabSpec kSpec{
     "sim",
     "On a real ski area, do the army's helicopters come in, circle a man where he is seen, put a "
     "section down near him (on the snow or down a fast rope), pick a squad left behind up and put "
-    "it down again, search where he was last seen, and fly home when the hunt is over?",
+    "it down again, search where he was last seen, and fly home when the hunt is over? Can he "
+    "take one set down, and does one rammed by his machine fall to the snow?",
     {
         {"seed", "38", "the map's seed"},
         {"version", "10", "the generator's version (a ski area: 10 or later)"},

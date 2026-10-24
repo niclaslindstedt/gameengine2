@@ -35,6 +35,7 @@ the row when the file moves.
 | `engine/loop/run_clock.hpp` | `oss-game-framework/src/loop/run-clock.ts` | createRunClock MAX_FRAME_SECONDS |
 | `games/fall_line/labs/army_flight_lab.cpp` | `game5/scripts/army-flight.mjs` | the army's helicopters shown (here measured: the helicopters table and every machine's path, per scenario) |
 | `games/fall_line/labs/army_lab.cpp` | `game5/scripts/army-ground.mjs` | the ground army shown (here measured: the army table and every soldier's path, per scenario) |
+| `games/fall_line/labs/army_para_lab.cpp` | `game5/scripts/army-flight.mjs` | the army's paramotors shown (here measured: the paramotors table, every rig's path and height, per scenario) |
 | `games/fall_line/labs/army_sled_lab.cpp` | `game5/scripts/army-ground.mjs` | the army's snowmobiles shown (here measured: the sleds table and every machine's path, per scenario) |
 | `games/fall_line/labs/gunfire_lab.cpp` | `game5/scripts/gunfire-table.mjs` | the gunfire's table (here the range table by weapon, range, rules and target, and a seed-38 hunt's fire) |
 | `games/fall_line/labs/lift_ride_lab.cpp` | `game5/scripts/lift-ride-preview.mjs` | the lift ride shown (here measured as a table, every lift ridden from its load zone to its top) |
@@ -44,16 +45,22 @@ the row when the file moves.
 | `games/fall_line/sim/army_door.hpp` | `game5/engine/game/army.ts` | man fight |
 | `games/fall_line/sim/army_drive.cpp` | `game5/engine/game/army-drive.ts` | wayCost chooseWay tunnelWithin |
 | `games/fall_line/sim/army_drive.hpp` | `game5/engine/game/army-drive.ts` | DriveRead TerrainRead wayCost chooseWay tunnelWithin |
-| `games/fall_line/sim/army_heli.cpp` | `game5/engine/game/army.ts`, `army-ground.ts` | stepArmy call arrive circleWay huntWant homeWant fly settle levelOut slideDoors writePursuers askLandings workLanding (the guns, the ram, the fall and the wreck not carried) |
+| `games/fall_line/sim/army_heli.cpp` | `game5/engine/game/army.ts`, `army-ground.ts` | stepArmy call arrive circleWay huntWant homeWant fly settle levelOut slideDoors writePursuers askLandings workLanding (the guns not carried; the ram, the fall and the wreck in `army_steal.cpp`) |
 | `games/fall_line/sim/army_heli.hpp` | `game5/engine/game/army.ts` | stepArmy landing armyHelis |
 | `games/fall_line/sim/army_heli_rules.hpp` | `game5/engine/game/defs/army.ts`, `defs/army-heli.ts`, `defs/army-ground.ts` | ARMY ARMY_HELI ARMY_GROUND (the landing, the rope, the approach, the dismount, the leapfrog) |
 | `games/fall_line/sim/army_land.cpp` | `game5/engine/game/army-land.ts`, `army.ts` | landingSpot armyFloor ropeHover |
 | `games/fall_line/sim/army_land.hpp` | `game5/engine/game/army-land.ts` | LandSpot landingSpot |
+| `games/fall_line/sim/army_para.cpp` | `game5/engine/game/army-para.ts` | freshPara launchPara flyPara huntPara trackRound heightFor handsFor leavePara fireRifle downPara fallPara (handsFor's crab and stall margin left to `paramotor::para_pilot`, the wing flown by the free ride's own physics; meetPara, the stolen helicopter's ram and wash, not carried) |
+| `games/fall_line/sim/army_para.hpp` | `game5/engine/game/army-para.ts` | freshPara launchPara huntPara leavePara |
+| `games/fall_line/sim/army_para_rules.hpp` | `game5/engine/game/defs/army-air.ts` | ARMY_AIR (the paramotors' rows) |
 | `games/fall_line/sim/army_rules.hpp` | `game5/engine/game/defs/army-ground.ts`, `defs/army-wave.ts` | ARMY_GROUND ARMY_WAVE |
 | `games/fall_line/sim/army_sled.cpp` | `game5/engine/game/army-sled.ts` | stepArmySleds sledPad setOff chase halt home dismount watch writeCrews |
 | `games/fall_line/sim/army_sled.hpp` | `game5/engine/game/army-sled.ts` | stepArmySleds sledPad crewed |
 | `games/fall_line/sim/army_sled_rules.hpp` | `game5/engine/game/defs/army-sled.ts` | ARMY_SLED |
 | `games/fall_line/sim/army_state.hpp` | `game5/engine/game/army-state.ts` | Soldier ArmyState |
+| `games/fall_line/sim/army_steal.cpp` | `game5/engine/game/army-steal.ts`, `army.ts` | ARMY_PILOT_DOOR armyHeliDoor ARMY_HELI_SOURCE (taken at the pilot's door) and the ram, the fall and the wreck |
+| `games/fall_line/sim/army_steal.hpp` | `game5/engine/game/army-steal.ts` | armyHeliDoor ARMY_HELI_SOURCE |
+| `games/fall_line/sim/army_steal_rules.hpp` | `game5/engine/game/defs/army.ts` | ARMY (the ram and the fall) |
 | `games/fall_line/sim/army_troop.cpp` | `game5/engine/game/army-troop.ts` | goToward stopHere watchProgress slopeAlong wayToward |
 | `games/fall_line/sim/army_troop.hpp` | `game5/engine/game/army-troop.ts` | goToward stopHere watchProgress slopeAlong |
 | `games/fall_line/sim/free.cpp` | `game5/engine/game/skied.ts`, `course.ts` | runUnder noteRun noteSkied leftRunPoint skiedResetPoint freeSpawn |
@@ -286,6 +293,7 @@ the row when the file moves.
 | `plugins/snowmobile/sled.hpp` | `game5/engine/game/sled-state.ts`, `sled.ts` | SledState SledControls SledContact standSled |
 | `plugins/snowmobile/spec.hpp` | `game5/engine/game/defs/sled.ts` | SLED SLED_PROBES sledMass sledInertia SledProbe SledSuspension |
 | `tests/fall_line_army_door_test.cpp` | `game5/tests/army_test.ts` | the door guns by the rules of fire |
+| `tests/fall_line_army_steal_test.cpp` | `game5/tests/army_test.ts` | a machine taken at its pilot's door and one rammed down |
 | `tests/mountain_generate_test.cpp` |  | generateLevel levelDigest analyzeLevel |
 | `tests/mountain_park_test.cpp` | `game5/engine/mapgen/trick-field.ts` | the terrain park (R20) |
 | `tests/mountain_real_face_test.cpp` | `game5/tests/real_faces_test.ts` | every face decodes to a mountain over its floor; a face builds a clean map |

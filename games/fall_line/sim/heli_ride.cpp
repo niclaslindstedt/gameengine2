@@ -1,7 +1,8 @@
 // The free ride's helicopter (heli_ride.hpp).
 //
 // ge:summary heli_pad, place_heli, step_heli_ride: board, fly, drop, home, crash, restart
-// ge:keywords heli helicopter pad board drop home crash wreck restart hold seat parked
+// ge:keywords heli helicopter pad board drop home crash wreck restart hold seat parked take_heli
+// ge:keywords crash_heli army
 // ge:skill sim helicopter
 // ge:test tests/fall_line_heli_test.cpp
 #include "fall_line/sim/heli_ride.hpp"
@@ -12,6 +13,7 @@
 #include "core/math.hpp"
 #include "core/num.hpp"
 #include "core/quat.hpp"
+#include "fall_line/sim/army_steal.hpp"
 #include "fall_line/sim/sled_ride.hpp"
 #include "helicopter/pilot.hpp"
 #include "helicopter/scenarios.hpp"
@@ -55,6 +57,7 @@ void fresh(GameState& state) {
   m.aboard = false;
   m.t = 0;
   m.flown = {};
+  m.army = false;
 }
 
 // THE SKIER SAT ON THE SKID: where the seat has him, facing out over it, moving with it. His skis
@@ -178,6 +181,8 @@ hc::HeliControls controls_for(const GameState& state, const Controls& c) {
     return hc::heli_turned_back(m.body, world, load_of(state), heli_controls(c));
   }
   if (m.mode == HeliMode::home) {
+    // A machine taken from the army has no pilot of its own to fly it home: let go.
+    if (m.army) return {};
     if (m.t < kHomeBeat) return m.flown;
     hc::HeliAim aim;
     aim.x = m.pad_x;
@@ -338,10 +343,14 @@ bool step_heli_ride(GameState& state, int32_t i, Controls& c) {
     return false;
   }
   if (!m.rider) {
-    // Sat on the skid: the press that does it is spent, never read again as the drop.
+    // Sat on the skid: the press that does it is spent, never read again as the drop. Within
+    // reach of a set-down army machine's pilot's door instead, he takes that (army_steal.hpp).
     if (c.machine && heli_within(state, i)) {
       c.machine = false;
       board(state, i);
+    } else if (c.machine && steal_army_heli(state, i)) {
+      c.machine = false;
+      return true;
     } else if (m.mode == HeliMode::parked && m.body.grounded && m.body.spool == 0) {
       // Parked with its rotor still: not stepped.
       return false;
@@ -357,6 +366,26 @@ bool step_heli_ride(GameState& state, int32_t i, Controls& c) {
   }
   hold(state, i);
   return true;
+}
+
+void take_heli(GameState& state, int32_t i, double x, double z, double heading, double spool) {
+  FreeHeli& m = state.heli;
+  m.body = hc::stand_heli(*state.level, x, z, heading);
+  m.body.spool = spool;
+  m.mode = HeliMode::parked;
+  m.aboard = false;
+  m.t = 0;
+  m.flown = {};
+  m.army = true;
+  board(state, i);
+}
+
+void crash_heli(GameState& state, int32_t i) {
+  FreeHeli& m = state.heli;
+  if (!m.present || m.mode == HeliMode::wreck) return;
+  hc::HeliEvents ev;
+  ev.speed = core::hypot3(m.body.vx, m.body.vy, m.body.vz);
+  wreck(state, i, ev);
 }
 
 bool restart_heli(GameState& state, int32_t i) {

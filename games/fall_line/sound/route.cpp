@@ -116,6 +116,7 @@ void run_sound_step(RunSound& sound, ge::audio::Synth& synth, const sim::GameSta
       case EventKind::para:  // the paramotor's sound comes with its own bed
       case EventKind::army_sled:
       case EventKind::army_heli:
+      case EventKind::army_para:
       case EventKind::gunfire:  // the reports, the cracks and the strikes wait for their voices
       case EventKind::hurt:     // the blow is heard as the fall that dealt it
       case EventKind::died:

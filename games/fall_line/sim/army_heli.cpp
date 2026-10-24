@@ -23,6 +23,7 @@
 #include "fall_line/sim/army_heli_rules.hpp"
 #include "fall_line/sim/army_land.hpp"
 #include "fall_line/sim/army_rules.hpp"
+#include "fall_line/sim/army_steal.hpp"
 #include "fall_line/sim/army_troop.hpp"
 
 namespace fall_line::sim {
@@ -669,10 +670,16 @@ void step_army_helis(GameState& state, bool on, Spot q) {
           say(state, ArmyHeliChange::gone, h);
         }
         break;
+      case ArmyHeliMode::fall:
+      case ArmyHeliMode::wreck:
+        step_downed_heli(state, h);
+        break;
       case ArmyHeliMode::gone:
         break;
     }
   }
+  // His machine flown into one of theirs (army_steal.hpp).
+  ram_army_helis(state);
   if (on && state.steps % kAskSteps == 0) ask_landings(state, soldiers, q);
   step_army_doors(state, q);
   std::erase_if(a.helis, [](const ArmyHeli& h) { return h.mode == ArmyHeliMode::gone; });
@@ -783,6 +790,16 @@ uint64_t army_helis_hash(const ArmyState& a, uint64_t h) {
   mix(a.from);
   mix(a.dropped);
   mix(a.picked);
+  // Only once one was taken or brought down, so a hunt that never was keeps its digest.
+  if (a.stolen > 0 || a.downed > 0) {
+    mix(a.stolen);
+    mix(a.downed);
+    for (const ArmyHeli& m : a.helis) {
+      mix(m.yaw_rate);
+      mix(m.roll);
+      mix(m.pitch);
+    }
+  }
   return h;
 }
 
@@ -804,6 +821,10 @@ const char* army_heli_mode_name(ArmyHeliMode m) {
       return "leave";
     case ArmyHeliMode::gone:
       return "gone";
+    case ArmyHeliMode::fall:
+      return "fall";
+    case ArmyHeliMode::wreck:
+      return "wreck";
   }
   return "?";
 }
@@ -822,6 +843,12 @@ const char* army_heli_change_name(ArmyHeliChange c) {
       return "leaving";
     case ArmyHeliChange::gone:
       return "gone";
+    case ArmyHeliChange::stolen:
+      return "stolen";
+    case ArmyHeliChange::rammed:
+      return "rammed";
+    case ArmyHeliChange::down:
+      return "down";
   }
   return "?";
 }

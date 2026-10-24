@@ -4,10 +4,10 @@
 //
 // A run whose hunt never sent a soldier leaves it inactive, hashes none of it and moves no digest.
 //
-// ge:summary The army as a run holds it: ArmyState, Soldier, ArmySled, ArmyHeli, modes, changes
+// ge:summary The army as a run holds it: ArmyState, Soldier, ArmySled, ArmyHeli, ArmyPara, modes
 // ge:keywords army army-state soldier soldier-mode soldier-from squad wave lift-squad troops
 // ge:keywords army-change army-sled army-sled-mode army-sled-change army-heli army-heli-mode
-// ge:keywords army-heli-change land-task
+// ge:keywords army-heli-change land-task army-para army-para-mode army-para-change
 // ge:skill sim
 // ge:test tests/fall_line_army_test.cpp
 #pragma once
@@ -17,6 +17,9 @@
 #include <vector>
 
 #include "ai/steer.hpp"
+#include "paramotor/air.hpp"
+#include "paramotor/para.hpp"
+#include "skier/skier.hpp"
 #include "snowmobile/sled.hpp"
 
 namespace fall_line::sim {
@@ -129,13 +132,24 @@ struct ArmySled {
 // - `set` on the snow, its doors open; `rope` hovering, the men sliding down;
 // - `rise` climbing straight back off it to the hunt;
 // - `leave` flying out over the map's edge, the hunt over;
-// - `gone` out over the edge: dropped at the end of the step.
-enum class ArmyHeliMode : uint8_t { due, hunt, land, set, rope, rise, leave, gone };
+// - `gone` out over the edge (or taken by him): dropped at the end of the step;
+// - `fall` rammed out of the sky, spinning down; `wreck` down on the snow (army_steal.hpp).
+enum class ArmyHeliMode : uint8_t { due, hunt, land, set, rope, rise, leave, gone, fall, wreck };
 
 // What an army helicopter's event says (`EventKind::army_heli`: its `gate` the change, its
 // `value` the machine's id): called, in over the edge, on the snow or at the rope's hover, back
-// off it, turned for home, gone.
-enum class ArmyHeliChange : uint8_t { called, arrived, landed, lifted, leaving, gone };
+// off it, turned for home, gone; taken by him off the snow, rammed, down on the snow.
+enum class ArmyHeliChange : uint8_t {
+  called,
+  arrived,
+  landed,
+  lifted,
+  leaving,
+  gone,
+  stolen,
+  rammed,
+  down
+};
 
 // A LANDING asked of a machine: to put men DOWN near him (`drop`) or PICK UP a squad left behind,
 // at a spot on the snow (m, the skid datum's place), set down on it facing `heading` (rad) or
@@ -177,6 +191,33 @@ struct ArmyHeli {
   LandTask task;
 };
 
+// What an army paramotor is doing (army_para.hpp):
+// - `due` called, coming in at its clock;
+// - `hunt` over him: circling where he is seen, searching where he was last seen;
+// - `leave` flying out over the map's edge, the hunt over;
+// - `down` its wing brought down onto the snow or into a crown, the soldier falling or lying;
+// - `gone` out over the edge or lain long enough: dropped at the end of the step.
+enum class ArmyParaMode : uint8_t { due, hunt, leave, down, gone };
+
+// What an army paramotor's event says (`EventKind::army_para`: its `gate` the change, its `value`
+// the rig's id): called, in over the edge, turned for home, gone, brought down.
+enum class ArmyParaChange : uint8_t { called, arrived, leaving, gone, down };
+
+// AN ARMY PARAMOTOR: a rifleman in the harness (`pilot`, a skier's state hung under the wing, the
+// free ride's own physics) and his rig (`wing`).
+struct ArmyPara {
+  int32_t id = 0;  // the army's own, in the order called; pursuer `army_para::kPursuerBase` + it
+  ArmyParaMode mode = ArmyParaMode::due;
+  double due = 0;      // the clock it comes in at, s
+  double t = 0;        // s in this mode
+  double bearing = 0;  // from the map's middle, the way it comes in on and leaves by, rad
+  int32_t dir = 1;     // the way round its circle: 1 clockwise from above
+  double next = 0;     // the clock before which he fires no burst, s
+  bool low = false;    // off the circle and down the fall line until back over `kFloorM`
+  ge::skier::SkierState pilot;
+  ge::paramotor::ParaState wing;
+};
+
 struct ArmyState {
   bool active = false;  // a soldier was sent this run: only then is any of it hashed
   // THE SOLDIERS OUT, reserved for `army::kMostSoldiers` at create, so a step never allocates.
@@ -211,15 +252,32 @@ struct ArmyState {
   double from = 0;
   int32_t dropped = 0;
   int32_t picked = 0;
+  // The machines he took off the snow and brought down this run (army_steal.hpp).
+  int32_t stolen = 0;
+  int32_t downed = 0;
   // Whether the hunt sends its helicopters. A lab or a test staging the army's other arms on
   // their own turns it off; the game never does.
   bool send_helis = true;
+  // THE PARAMOTORS OUT, reserved for `army_para::kMostParas` at create; the next one's id, how many
+  // were called this run (each one's bearing either side of the army's), how many were brought
+  // down by the snow or a crown (a fault the labs hold at nought), and the eddies' field their
+  // wings fly in (made off the map's seed when the first is called).
+  std::vector<ArmyPara> paras;
+  int32_t next_para = 0;
+  int32_t paras_called = 0;
+  int32_t paras_lost = 0;
+  ge::paramotor::ParaAirField para_field{};
   // THE SOLDIERS BY PLACE, built each step before they move (ai/steer.hpp): who keeps apart from
   // whom. Scratch: never hashed.
   ge::ai::Neighbours near;
   // Whether its men fire (gunfire.hpp). A lab or a test staging the army's moves without the
   // gunfire turns it off; the game never does.
   bool fire = true;
+  // Whether the paramotors' eddies' field (`para_field`) has been made.
+  bool para_air = false;
+  // Whether the hunt sends its paramotors. A lab or a test staging the army's other arms on their
+  // own turns it off; the game never does.
+  bool send_paras = true;
 };
 
 }  // namespace fall_line::sim
