@@ -21,6 +21,7 @@
 #include "lab/lab.hpp"
 #include "lab/raster.hpp"
 #include "render/frame.hpp"
+#include "render/particles.hpp"
 #include "render/post.hpp"
 #include "render/sky.hpp"
 #include "render/terrain.hpp"
@@ -103,6 +104,7 @@ struct Scene {
   gr::Terrain terrain;
   gr::Water water;
   gr::Underwater under;
+  gr::Particles particles;  // the mist and the spray
   gr::Post post;
   gr::FrameRecorder rec;
   Ground ground;
@@ -131,12 +133,14 @@ inline bool make_scene(ge::gpu::Device& d, Scene& s, float (*height)(double, dou
   gr::create_terrain(d, s.pipelines, s.terrain, src, s.layout);
   gr::create_water(d, s.pipelines, s.water, s.layout);
   gr::create_underwater(d, s.pipelines, s.under, s.layout);
+  gr::create_particles(d, s.pipelines, s.particles, s.layout, s.terrain, {.capacity = 8192});
   gr::create_post(d, s.pipelines, s.post, s.layout, wgpu::TextureFormat::RGBA8Unorm);
   if (!s.pipelines.finish(d)) return false;
   ge::gpu::end_load(d);
   s.frame = gr::frame_group(d, s.layout, s.uniforms, s.sky);
   gr::create_water_targets(d, s.water, s.targets);
   gr::bind_underwater(d, s.under, s.water);
+  gr::bind_particle_targets(d, s.particles, s.targets);
   s.post_group = gr::post_group(d, s.post, s.targets.hdr_view);
   s.rec.init(d, "gpu-water.timer", 10);
   s.out = ge::gpu::create_target(d, "gpu-water.final", w, h);
@@ -151,6 +155,7 @@ inline gl::Picture draw(ge::gpu::Device& d, Scene& s, const gr::FrameView& v, bo
   gr::prepare_terrain(d, s.terrain, v);
   gr::prepare_water(d, s.water, v);
   gr::prepare_underwater(d, s.under, s.water, v, s.targets.height);
+  gr::prepare_particles(d, s.particles, 0, 0.1);
   wgpu::CommandEncoder e = d.device.CreateCommandEncoder();
   gr::encode_sky_tables(s.sky, s.pipelines, s.rec, e);
   gr::encode_terrain_cull(s.terrain, s.pipelines, s.rec, e, s.frame);
@@ -162,6 +167,7 @@ inline gl::Picture draw(ge::gpu::Device& d, Scene& s, const gr::FrameView& v, bo
     gr::encode_water(s.water, s.pipelines, s.rec, e, s.targets, s.frame);
     gr::encode_underwater(s.under, s.pipelines, s.rec, e, s.targets, s.frame);
   }
+  gr::encode_particles(s.particles, s.pipelines, s.rec, e, s.targets, s.frame);
   gr::encode_post(s.post, s.pipelines, s.rec, e, s.frame, s.post_group, s.out.view);
   s.rec.end_frame(e);
   wgpu::CommandBuffer c = e.Finish();
@@ -169,6 +175,19 @@ inline gl::Picture draw(ge::gpu::Device& d, Scene& s, const gr::FrameView& v, bo
   s.rec.after_submit(d);
   const ge::gpu::Image img = ge::gpu::read_now(d, s.out);
   return gl::Picture{static_cast<int>(img.width), static_cast<int>(img.height), img.rgba};
+}
+
+// The particles flown `dt` s, this step's `births` born first, in still air.
+inline void fly(ge::gpu::Device& d, Scene& s, const std::vector<gr::Particle>& births, double dt) {
+  gr::emit_particles(s.particles, births);
+  gr::prepare_particles(d, s.particles, dt, 0.1);
+  wgpu::CommandEncoder e = d.device.CreateCommandEncoder();
+  s.rec.begin_frame(d);
+  gr::encode_particles_sim(s.particles, s.pipelines, s.rec, e);
+  s.rec.end_frame(e);
+  wgpu::CommandBuffer c = e.Finish();
+  d.queue.Submit(1, &c);
+  s.rec.after_submit(d);
 }
 
 inline gr::FrameView view_at(double x, double y, double z, double heading, double pitch,

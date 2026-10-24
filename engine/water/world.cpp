@@ -72,6 +72,21 @@ void put_surface(const World& world, const Body& body, double level, double x, d
   out.breaking = breaking_at(s, water_depth, world.wind.mean);
 }
 
+// A body's rings on its surface: the height, the slope folded into the normal, the velocity.
+void add_wake(const Wakes& wakes, int body, double x, double z, double t, Sample& out) {
+  const WakeAt w = wake_at(wakes, body, x, z, t);
+  out.surface += w.height;
+  out.depth += w.height;
+  const double dx = -out.nx / out.ny + w.dx, dz = -out.nz / out.ny + w.dz;
+  const double n = std::sqrt(dx * dx + 1 + dz * dz);
+  out.nx = -dx / n;
+  out.ny = 1 / n;
+  out.nz = -dz / n;
+  out.vx += w.u;
+  out.vy += w.v;
+  out.vz += w.w;
+}
+
 bool sample_lake(const World& world, const Body& body, double x, double y, double z, double t,
                  Sample& out) {
   if (x < body.box[0] || x > body.box[2] || z < body.box[1] || z > body.box[3]) return false;
@@ -354,6 +369,9 @@ Sample sample(const World& world, double x, double y, double z, double t) {
         break;
     }
     if (!hit) continue;
+    if (!world.wakes.rings.empty() && (body.kind == Kind::lake || body.kind == Kind::ocean)) {
+      add_wake(world.wakes, static_cast<int>(i), x, z, t, s);
+    }
     s.body = static_cast<int>(i);
     if (s.depth >= 0) return s;
     if (s.depth > best.depth) best = s;

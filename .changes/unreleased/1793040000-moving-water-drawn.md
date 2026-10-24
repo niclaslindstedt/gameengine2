@@ -1,0 +1,4 @@
+---
+type: Added
+---
+Moving water drawn, and wakes. `water/wake.hpp`: a moving hull leaves a trail of impulse rings (deep-water Cauchy–Poisson rings, a few a second) whose sum opens into its Kelvin wake (19.4 degrees measured for a 4 m hull at 3 m/s); the rings ride on a lake's or a sea's surface in `water::sample`, so a float is rocked by another's wake, and `splash_ring` sets one off for a splash. The water pass draws them. `render/water_stream.hpp`: rivers as ribbons, flow regions as their wet cells and every waterfall's sheet as a white curtain along its path, their ripples carried downstream by a two-phase flow map with lace foam where the water runs fast; `waterfall_spray` and `splash_spray` hand the particle pool the mist and the drops. The still and the moving water share one light (`render/wgsl/water_light.wgsl`). The `float` lab measures the wake's angle at four speeds; `gpu-water` adds a boat's wake, crates dropped in, a river and a waterfall.

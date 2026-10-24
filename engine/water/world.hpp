@@ -23,7 +23,8 @@
 // a brush world's water, slime and lava, or any boxed water; a volume carries no waves
 // (`Body::waves` may be laid by hand). A FLOW region (flow.hpp) is water simulated on a grid: a
 // wall broken, a basin emptying, a flood; `step_flows` steps every region and `sample` reads its
-// surface and current where its cells are wet.
+// surface and current where its cells are wet. WAKES (wake.hpp): the rings in `World::wakes` ride
+// on their lake's or ocean's surface in every sample.
 //
 // THE LOOK. A body's colour is what is in its water (optics.hpp): `Stuff::look` names a row of
 // `water::looks()`, or `Stuff::water` states the game's own constituents; `Body::optics` is
@@ -36,7 +37,7 @@
 // ge:summary Bodies of water (lake, ocean, channel, volume) and the one sample query
 // ge:keywords water world body lake ocean river channel stream volume brush hull add_lake
 // ge:keywords add_ocean add_river add_volume sample surface depth bed current density look
-// ge:keywords optics colour add_flow step_flows
+// ge:keywords optics colour add_flow step_flows wakes
 // ge:skill water
 // ge:test tests/water_world_test.cpp
 #pragma once
@@ -50,6 +51,7 @@
 #include "water/fetch.hpp"
 #include "water/flow.hpp"
 #include "water/optics.hpp"
+#include "water/wake.hpp"
 #include "water/waves.hpp"
 #include "wind/field.hpp"
 
@@ -114,6 +116,7 @@ struct World {
   std::vector<Flow> flows;  // the flow regions (flow.hpp), stepped by `step_flows`
   uint32_t seed = 1;        // the waves' phases and directions, with the body's index
   Lay lay;                  // how every body's band is laid
+  Wakes wakes;              // the rings on the lakes and the oceans (wake.hpp)
 };
 
 int add_lake(World& world, std::span<const Point> shore, double level, Stuff stuff = {},

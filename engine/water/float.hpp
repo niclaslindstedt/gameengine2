@@ -31,7 +31,7 @@
 //
 // ge:summary Floating: probes on a rigid body, buoyancy, drag, slam, added mass, planing, splashes
 // ge:keywords water float floating buoyancy probe drag slam added-mass planing plate skim splash
-// ge:keywords float_push step_floater floater rigid-body draught heave
+// ge:keywords float_push step_floater floater rigid-body draught heave splash_ring
 // ge:skill water
 // ge:test tests/water_float_test.cpp
 #pragma once
@@ -109,6 +109,11 @@ struct Floater {
   Motion motion;
   FloatState state;
 };
+
+// A splash's ring on `body` (wake.hpp): the water a probe of its size throws aside going through
+// the surface at its speed (half a sphere's volume, times its speed over a metre a second, times
+// `strength`), set off at `t`.
+void splash_ring(Wakes& wakes, int body, const Splash& splash, double t, double strength = 1);
 
 // One step of `dt` s of a floater under gravity and the water; returns the push it felt.
 Push step_floater(const World& world, std::span<const Probe> probes, Floater& body, double t,

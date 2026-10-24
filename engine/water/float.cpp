@@ -127,4 +127,16 @@ Push step_floater(const World& world, std::span<const Probe> probes, Floater& bo
   return push;
 }
 
+void splash_ring(Wakes& wakes, int body, const Splash& splash, double t, double strength) {
+  Ring ring;
+  ring.x = splash.x;
+  ring.z = splash.z;
+  ring.t0 = t;
+  const double r = splash.size;
+  ring.volume = strength * (2.0 / 3.0) * kPi * r * r * r * splash.speed;
+  ring.size = r;
+  ring.body = body;
+  emit_ring(wakes, ring);
+}
+
 }  // namespace ge::water

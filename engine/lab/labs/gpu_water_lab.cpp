@@ -35,6 +35,8 @@
 #include "render/sky.hpp"
 #include "render/terrain.hpp"
 #include "render/water.hpp"
+#include "render/water_stream.hpp"
+#include "water/float.hpp"
 #include "water/world.hpp"
 #include "wind/field.hpp"
 
@@ -70,6 +72,24 @@ float sea_ground(double x, double z) {
   const double rise = z < kBeach ? -40 : -40 + (z - kBeach) * 0.12;
   return static_cast<float>(rise + 1.5 * lm::sin(x / 29) * lm::cos(z / 41));
 }
+
+// THE FALLS: a river down a valley onto a 12 m cliff at z = 300 m and into a pool at its foot,
+// the valley's sides rising 6 m either side; the field 512 m across.
+constexpr double kRiverX = 256, kCliff = 300, kTop = 130, kFoot = 118;
+double falls_height(double x, double z) {
+  const double across = (x - kRiverX) / 6;
+  const double carve = lm::exp(-across * across);
+  const double side = (x - kRiverX) / 60;
+  const double valley = 6 * (1 - lm::exp(-side * side)) + 0.6 * lm::sin(z / 23) * lm::cos(x / 31);
+  const double top = kTop + 0.02 * (kCliff - z) - 2.4 * carve;
+  const double dz = z - (kCliff + 9), dx = x - kRiverX;
+  const double pool = lm::exp(-(dx * dx + dz * dz) / 120);
+  const double foot = kFoot - 0.01 * (z - kCliff) - 1.6 * carve - 3.5 * pool;
+  const double u = std::clamp((z - (kCliff - 0.5)) / 1.5, 0.0, 1.0);
+  return valley + top + (foot - top) * u * u * (3 - 2 * u);
+}
+float falls_ground(double x, double z) { return static_cast<float>(falls_height(x, z)); }
+double falls_bed(const void*, double x, double z) { return falls_height(x, z); }
 
 // A lake world under `wind` m/s from the west, in `look`.
 gw::World lake_world(double wind, const std::string& look) {
@@ -164,8 +184,8 @@ void run(gl::Lab& lab) {
                "Install Mesa's Vulkan drivers (apt install mesa-vulkan-drivers). Skill: gpu.");
     }
     placeholders(lab,
-                 {"lake-calm", "lake-fresh", "looks", "sea-light", "sea-fresh", "sea-gale",
-                  "sunset", "fly-out"},
+                 {"lake-calm", "lake-fresh", "wake", "rings", "looks", "sea-light", "sea-fresh",
+                  "sea-gale", "sunset", "fly-out", "river", "waterfall"},
                  w, h);
     return;
   }
@@ -220,6 +240,70 @@ void run(gl::Lab& lab) {
     }
     lab.shot({c.id, c.title, c.caption, c.look_for, {{"wind", fixed(c.wind, 1) + " m/s"}}}, pic,
              Det::measured);
+  }
+
+  // THE WAKE: a 5 m boat across the calm lake at 5 m/s for 40 s, its rings summed as the
+  // simulation sums them (water/wake.hpp); then crates dropped by the shore, their rings.
+  {
+    gw::World world = lake_world(1.5, "nordic-clear");
+    gw::Trail trail;
+    const double x0 = kLakeX - 220, speed = 5;
+    double t = 0;
+    for (int i = 0; i <= 40 * 120; ++i) {
+      t = i / 120.0;
+      gw::wake_trail(world.wakes, trail, 0, x0 + speed * t, kLakeZ, speed, 0, 5, 2, 0.4, t);
+    }
+    gr::set_water_body(d, lake.water, 0, world.bodies[0]);
+    gr::set_water_wakes(d, lake.water, 0, world.wakes, 0);
+    const double bx = x0 + speed * t;
+    const gr::FrameView behind =
+        view_at(bx - 70, kLakeLevel + 7, kLakeZ - 12, 1.45, -0.12, 0.3, 1.3, t);
+    lab.shot({"wake",
+              "A BOAT'S WAKE ON THE CALM LAKE",
+              "A 5 m boat across the lake at 5 m/s under a light air after 40 s, seen from 7 m up "
+              "70 m behind it, looking along its track into a sun 17 degrees up: the rings it "
+              "set off every tenth of a second summed into its wake.",
+              "the arms spreading from the boat at about 19 degrees either side, their crests "
+              "breaking the calm mirror and catching the sun's glitter; the transverse waves "
+              "across the track between them; the water outside the arms still",
+              {{"speed", "5 m/s"}, {"wind", "1.5 m/s"}}},
+             draw(d, lake, behind), Det::measured);
+
+    gw::World drops = lake_world(0.5, "nordic-clear");
+    const double sx = kLakeX - 240, sz = kLakeZ - 110;
+    const double when[3] = {1.5, 3.5, 6.0};
+    for (int i = 0; i < 3; ++i) {
+      const gw::Splash crate{
+          .x = sx + 12.0 * i, .y = kLakeLevel, .z = sz + 9.0 * (i % 2), .speed = 7, .size = 0.6};
+      gw::splash_ring(drops.wakes, 0, crate, 8.0 - when[i]);
+    }
+    // A fourth crate going in a quarter of a second before: its ring just set off, its spray
+    // in the air.
+    const gw::Splash last{.x = sx - 10, .y = kLakeLevel, .z = sz - 8, .speed = 7, .size = 0.6};
+    gw::splash_ring(drops.wakes, 0, last, 7.75);
+    ge::core::Rng splash_rng = ge::core::make_rng(7);
+    std::vector<gr::Particle> spray;
+    gr::splash_spray(last, splash_rng, spray);
+    for (int i = 0; i < 8; ++i) {
+      fly(d, lake, spray, 1.0 / 32);
+      spray.clear();
+    }
+    gr::set_water_body(d, lake.water, 0, drops.bodies[0]);
+    gr::set_water_wakes(d, lake.water, 0, drops.wakes, 0);
+    const gr::FrameView near = view_at(sx - 22, kLakeLevel + 7, sz - 18, 0.9, -0.3, 0.6, 2.2, 8.0);
+    lab.shot({"rings",
+              "CRATES DROPPED IN",
+              "Crates dropped into the still lake 6, 3.5, 1.5 and a quarter of a second ago, "
+              "seen from 7 m up: each splash one ring (water/float.hpp's splash_ring), its waves "
+              "lengthening outward and its front running on at their group speed; the newest "
+              "one's spray in the air (render/water_stream.hpp's splash_spray).",
+              "rings of three sizes, the oldest the widest with the longest waves outside and "
+              "short ones within; the mirror ringed, not noise; a crown of white drops over "
+              "the newest splash",
+              {{"wind", "0.5 m/s"}}},
+             draw(d, lake, near), Det::measured);
+    gr::set_water_wakes(d, lake.water, 0, gw::Wakes{}, 0);
+    gr::clear_particles(d, lake.particles);
   }
 
   // THE LOOKS: the shallows from above, a sandy shelf from 0 to 6 m deep.
@@ -354,6 +438,91 @@ void run(gl::Lab& lab) {
               {}},
              sheet, Det::measured);
   }
+  // THE RIVER AND THE FALLS: a channel down the valley (water/world.hpp's add_river), then a
+  // flow region over the cliff (water/flow.hpp), its sheets drawn as curtains.
+  {
+    ge::wind::Field wind;
+    wind.mean = 3;
+    gw::World world(wind);
+    std::vector<gw::ChannelPoint> line;
+    for (int i = 0; i <= 14; ++i) {
+      const double z = kCliff - 170 + 10.0 * i;
+      line.push_back({kRiverX, z, falls_height(kRiverX, z) + 1.6, 10, 1.6});
+    }
+    gw::add_river(world, line, 6, {.look = "glacial"}, {falls_bed, nullptr});
+    gw::FlowSpec spec;
+    spec.nx = 64;
+    spec.nz = 64;
+    spec.cell = 1;
+    spec.x0 = kRiverX - 32;
+    spec.z0 = kCliff - 30;
+    spec.open = gw::kNorth;
+    gw::Flow flow = gw::make_flow(spec);
+    gw::set_bed(flow, falls_bed, nullptr);
+    flow.sources.push_back({kRiverX, kCliff - 28.5, 6});
+    gw::add_flow(world, std::move(flow), {.look = "glacial"});
+    const double dt = 1.0 / 30;
+    double t = 0;
+    for (int i = 0; i < 60 * 30; ++i) {
+      gw::step_flows(world, dt);
+      t += dt;
+    }
+    const gw::Flow& f = world.flows[0];
+    double sheets = 0;
+    for (const gw::Fall& fall : f.falls) sheets += fall.discharge;
+    lab.metric("falls.sheets", static_cast<double>(f.falls.size()), "count", Det::measured);
+    lab.metric("falls.discharge", sheets, "m3/s", Det::measured);
+    if (f.falls.empty()) {
+      lab.fail("no sheet leaves the cliff's lip after 60 s of a 6 m3/s river",
+               "Check the region's bed and source (water/flow.hpp's falls). Skill: water.");
+    }
+    Scene fs;
+    ge::gpu::Device& dfl = fresh();
+    make_scene(dfl, fs, falls_ground, kFoot, 2, w, h);
+    gr::StreamMesh mesh;
+    gr::build_water_streams(world, t, mesh);
+    gr::prepare_water_streams(dfl, fs.water, mesh, world);
+    lab.metric("streams.triangles", static_cast<double>(mesh.indices.size()) / 3, "count",
+               Det::measured);
+    // The mist and the spray where the sheets land, flown for 4 s before the pictures.
+    ge::core::Rng spray_rng = ge::core::make_rng(24);
+    std::vector<gr::Particle> births;
+    size_t thrown = 0;
+    for (int i = 0; i < 4 * 30; ++i) {
+      births.clear();
+      gr::waterfall_spray(f, dt, spray_rng, births);
+      thrown += births.size();
+      fly(dfl, fs, births, dt);
+    }
+    lab.metric("falls.spray", static_cast<double>(thrown), "count", Det::measured);
+    const gr::FrameView bank =
+        view_at(kRiverX + 10, kTop + 4.5, kCliff - 125, -0.25, -0.16, 0.6, 2.2, t);
+    lab.shot({"river",
+              "A RIVER DOWN THE VALLEY",
+              "A glacial river of 6 m3/s down a valley falling 1 in 50, from 4 m up on its bank: "
+              "a channel (water/world.hpp's add_river) drawn as a ribbon, its ripples carried "
+              "downstream by a flow map in two phases.",
+              "the river's surface falling away down the valley between its banks, the ripples "
+              "finer and rougher mid-stream where it runs fastest, foam lace only where it is "
+              "fast; the water's milky green-blue",
+              {{"discharge", "6 m3/s"}}},
+             draw(dfl, fs, bank), Det::measured);
+    const gr::FrameView pool =
+        view_at(kRiverX + 7, kFoot + 3, kCliff + 34, kPi - 0.2, 0.08, 0.6, 2.2, t);
+    lab.shot({"waterfall",
+              "THE FALLS FROM THE POOL",
+              "The same river over a 12 m cliff into a pool, from 3 m up 34 m downstream: the "
+              "flow region's sheets (water/flow.hpp) drawn as a curtain along their ballistic "
+              "path, white water where they land and the stream running on, the mist and spray "
+              "thrown up where it lands (render/water_stream.hpp's waterfall_spray).",
+              "a white curtain from the lip to the pool, streaked down its height; a haze of "
+              "mist and drops round its foot; foam round where it lands thinning downstream; the "
+              "pool's surface rough below the falls and "
+              "calmer beyond",
+              {{"discharge", "6 m3/s"}, {"drop", "12 m"}}},
+             draw(dfl, fs, pool), Det::measured);
+  }
+
   int errors = 0, late = 0;
   for (const auto& dev : devices) {
     errors += static_cast<int>(dev->errors.load());
