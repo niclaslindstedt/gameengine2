@@ -121,6 +121,23 @@ gauge and where a rider is let go are the generator's (`lift_look`, `let_go_of` 
 `mapgen/lift_line.hpp`), read and never restated. `tests/mountain_lift_loop_test.cpp` holds it on
 three hand-built lifts; the game's ride over it is the `sim` skill's (`lift-ride` lab).
 
+## The village's streets (`mountain/village`, M13g)
+
+`plugins/mountain/village/` (`ge::mountain::village`, built into `ge_mountain`) lays a ski area's
+village on the valley floor below the hub: `plan_streets(level, pads)` is a pure function of the
+map off hashes of its seed (`pick`), never a stream, so no map's digest moves for it. The plan is
+a loop (the main street along the hub's valley edge, the back street behind it, cross streets at
+both ends and between), one or two roads out off the map's edge, the square below the main lift
+and the day car park with its aisles; candidates are tried round the village's point and at three
+spans, and the first whose loop, square and road clear everything stands. Every number, from the
+cross-sections to the clearances, is `street_rules.hpp`'s. A street keeps off the runs, the lifts'
+lines, stations and queue lanes, the hub, the tunnels, the gates, the start, the finish, the
+kickers and the `pads` the game names (the machines' spots belong to the game, which passes
+them). `bake_ground` paints the plan onto a metre grid (`Ground`: road, street, felled, garden)
+and `felled_trees` reads which of the map's trees go. The caller keeps the plan; nothing stores it
+on the `Level`. `tests/mountain_village_test.cpp` holds the loop, the clearances, the graph, the
+ground and the reference seeds' golden; the `village` lab draws it.
+
 ## The mountain as drawn (`mountain/app`, M8)
 
 `plugins/mountain/app/` (`ge_mountain_app`, namespace `ge::mountain::app`, built only with the
@@ -186,9 +203,10 @@ it moves the ground the simulation skis on; every term is light.
 `--version=1,8`, the single piste and a ski area's race map) and
 `mapgen-cost` (`PRESET=release`), and for the ski area `resort` (the area from above and its
 courses, with its lifts, runs and courses as tables and the attempts tried) and `junctions`
-(where the groomed snow steps where runs meet, the worst drawn as relief). A change to mapgen or
+(where the groomed snow steps where runs meet, the worst drawn as relief), and `village` (the
+village's streets, the ground under them and the trees felled, over seeds). A change to mapgen or
 analysis runs `level` and `analyze` before and after (`--tag=before`, then `--compare=before`);
-a change to the ski area's build runs `resort` and `junctions` the same way, and a change to a
+a change to the ski area's build runs `resort`, `junctions` and `village` the same way, and a change to a
 discipline runs its lab (`slalom`: both runs straightened, the map from above, the gate table;
 `speed-events`: the downhill, super-G and both giant slalom runs straightened, with their
 jumps, nets and speed trap; `speed-ski`: the track's profile from the side and the map from

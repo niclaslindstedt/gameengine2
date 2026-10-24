@@ -1,0 +1,4 @@
+# each seed's village at generator v10: the seed, the plan's hash, its streets and the trees it fells (mountain_village_test)
+38 0fc12d9cf89d2c01 17 447
+7 f3c4993b01fcb16d 16 362
+101 e5f2756ff24cdc9e 16 431
