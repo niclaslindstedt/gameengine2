@@ -85,32 +85,23 @@ void draw_text(const TextRun& t, Rect clip, Image& target) {
             cx1 = static_cast<int>(std::ceil(bounds.right() - 0.5f));
   const int cy0 = static_cast<int>(std::ceil(bounds.y - 0.5f)),
             cy1 = static_cast<int>(std::ceil(bounds.bottom() - 0.5f));
-  const int base = static_cast<int>(std::lround(t.baseline));
-  float pen = t.x;
-  int prev = -1;
-  for (size_t i = 0; i < t.text.size();) {
-    const int g = t.font->glyph_index(next_codepoint(t.text, i));
-    if (prev >= 0) pen += t.font->kern(prev, g, t.size);
-    const float whole = std::floor(pen);
-    const GlyphMask& m = t.font->mask(g, t.size, pen - whole);
-    const int ox = static_cast<int>(whole) + m.x0, oy = base + m.y0;
-    for (int y = 0; y < m.h; y++) {
-      const int ty = oy + y;
-      if (ty < cy0 || ty >= cy1) continue;
-      uint8_t* row = target.rgba.data() + static_cast<size_t>(ty) * target.width * 4;
-      for (int x = 0; x < m.w; x++) {
-        const int tx = ox + x;
-        if (tx < cx0 || tx >= cx1) continue;
-        const uint8_t a = m.alpha[static_cast<size_t>(y) * m.w + x];
-        if (a == 0) continue;
-        Color c = t.color;
-        c.a *= static_cast<float>(a) / 255.0f;
-        blend_over(row + static_cast<size_t>(tx) * 4, c);
-      }
-    }
-    pen += t.font->glyph_advance(g, t.size) + t.tracking;
-    prev = g;
-  }
+  place_glyphs(*t.font, t.text, t.size, t.x, t.baseline, t.tracking,
+               [&](const GlyphMask& m, int ox, int oy) {
+                 for (int y = 0; y < m.h; y++) {
+                   const int ty = oy + y;
+                   if (ty < cy0 || ty >= cy1) continue;
+                   uint8_t* row = target.rgba.data() + static_cast<size_t>(ty) * target.width * 4;
+                   for (int x = 0; x < m.w; x++) {
+                     const int tx = ox + x;
+                     if (tx < cx0 || tx >= cx1) continue;
+                     const uint8_t a = m.alpha[static_cast<size_t>(y) * m.w + x];
+                     if (a == 0) continue;
+                     Color c = t.color;
+                     c.a *= static_cast<float>(a) / 255.0f;
+                     blend_over(row + static_cast<size_t>(tx) * 4, c);
+                   }
+                 }
+               });
 }
 
 }  // namespace

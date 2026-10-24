@@ -19,6 +19,7 @@
 // ge:test tests/ui_font_test.cpp
 #pragma once
 
+#include <cmath>
 #include <cstdint>
 #include <memory>
 #include <span>
@@ -80,6 +81,27 @@ class Font {
 // The next code point of UTF-8 `s` at byte `i`, advancing `i`; a malformed byte reads as
 // U+FFFD and advances one byte.
 uint32_t next_codepoint(std::string_view s, size_t& i);
+
+// A run of `text` set at `size` from the pen `x` on `baseline`, `tracking` px after each glyph:
+// `place(mask, left, top)` for every glyph, its mask's top-left pixel at (left, top). The one
+// place a run's pen is advanced, so the CPU raster and the GPU pass (render/ui_pass.hpp) set the
+// same pixels.
+template <class Place>
+void place_glyphs(const Font& font, std::string_view text, float size, float x, float baseline,
+                  float tracking, Place&& place) {
+  const int base = static_cast<int>(std::lround(baseline));
+  float pen = x;
+  int prev = -1;
+  for (size_t i = 0; i < text.size();) {
+    const int g = font.glyph_index(next_codepoint(text, i));
+    if (prev >= 0) pen += font.kern(prev, g, size);
+    const float whole = std::floor(pen);
+    const GlyphMask& m = font.mask(g, size, pen - whole);
+    place(m, static_cast<int>(whole) + m.x0, base + m.y0);
+    pen += font.glyph_advance(g, size) + tracking;
+    prev = g;
+  }
+}
 
 enum class Weight : uint8_t { medium, semibold };
 

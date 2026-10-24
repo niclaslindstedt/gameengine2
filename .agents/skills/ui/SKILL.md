@@ -23,7 +23,12 @@ is the design; this skill is how to work in it.
   by glyph, size and quarter-pixel phase. `ui_font(Weight)` is the built-in Barlow Condensed (two
   weights, OFL, `engine/ui/fonts/OFL.txt`), pinned and hashed in `cmake/Ui.cmake` and compiled in.
 - **The CPU raster** (`raster.hpp`): the draw list into an image. The labs' pictures, the tests'
-  pixels, and the reference the GPU pass (M22b) is held to.
+  pixels, and the reference the GPU pass is held to.
+- **The GPU pass** (`engine/render/ui_pass.hpp`, the `render` skill): the same draw list in
+  one instanced pass after post, into a UNORM output. It shares the raster's rules (coverage at
+  the pixel's centre, the clip rule, `place_glyphs`), so a change to how the raster decides a
+  pixel changes `ui_pass.wgsl` in the same PR. `tests/render_ui_pass_test.cpp` and the
+  `menu-gpu` lab (`make lab LAB=menu-gpu`) hold the two to 3 levels of each other.
 - **Backdrops** (`background.hpp`): layers in UNIT coordinates of the area they fill (so one
   backdrop reads the same on every screen shape): colour, gradient, glow, scrim, vignette, dim, a
   drifting image (`Drift`: a slow zoom and pan, out and back, eased) and the live scene (the frame
