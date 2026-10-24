@@ -14,6 +14,7 @@ here names a genre's word: a feel is a ROW of knobs, never a code path.
 | --- | --- |
 | `move/spec.hpp` | `MoveSpec`: every knob with its unit; the presets; `scale_lengths` |
 | `move/knobs.hpp` | The knobs by name (unit, range, help): `apply_knobs`, `knob_text`, the fields a console binds |
+| `move/cvars.hpp` | The knobs bound as console cvars (`bind_knobs`: `sv_` and the server's tier by default) and a server cfg run on a spec (`apply_cfg`, the labs' `--cfg`) |
 | `move/presets.cpp` | The five preset rows and what each is for |
 | `move/world.hpp` | `World::trace`: the one question a mover asks a world, and its contract |
 | `move/box_world.hpp` | Boxes, ramps and stairs as brushes; the swept-box trace |

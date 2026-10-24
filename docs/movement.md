@@ -24,7 +24,7 @@ None of these is a different system. Each is a ROW of the same knobs (`MoveSpec`
 
 | Home | What |
 | --- | --- |
-| `engine/move/` | The knobs (`spec.hpp`) and their names (`knobs.hpp`), the presets, the step (`step.hpp`), the world's one question (`world.hpp`), a box world for labs and prototypes (`box_world.hpp`), the strafe jumper's hands (`strafe.hpp`), the scenarios (`scenarios.hpp`). Depends on `engine/core` only |
+| `engine/move/` | The knobs (`spec.hpp`) and their names (`knobs.hpp`), the presets, the step (`step.hpp`), the world's one question (`world.hpp`), a box world for labs and prototypes (`box_world.hpp`), the strafe jumper's hands (`strafe.hpp`), the scenarios (`scenarios.hpp`), the knobs bound as cvars (`cvars.hpp`). Depends on `engine/core` and, for the binding, `engine/console` |
 | `plugins/shooter/` (M18e) | The classic row in the classic map's units, the brush world's clip-hull trace answering `World::trace`, the server's other movetypes (toss, bounce, push) |
 | `engine/water/swim` (M24d) | Swimming: a body in the water is handed to the swimmer, and back (§ Water) |
 | `engine/camera` (M26) | Reads the body (§ What a camera reads); never feeds it |
@@ -98,14 +98,32 @@ what the labs and tests stand on and what a game prototypes on before its own wo
 
 ## Knobs as cvars
 
-Every knob has a row in `knobs.cpp` (its bare name, unit, range and help) and nowhere else. The
-labs take `--set=name=value,...` through `apply_knobs`, `knob_text` prints a row's difference
-from a preset, and `number_field` / `flag_field` / `count_field` hand the console the field to
-bind (`engine/console`, M21: a bound cvar writes straight into the struct, which the step reads
-with no lookup). A game binds them under its own owner prefix, the server's rules usually
-(`sv_gravity`, `sv_maxspeed`, `sv_airaccelerate`, `sv_friction`, `sv_stopspeed`,
-`sv_jumpspeed`, `sv_stepheight`, ...), so a cfg file retunes the feel without a rebuild and a
-server sends its row to every client in the server info (M28b).
+Every knob has a row in `knobs.cpp` (its bare name, unit, range and help) and nowhere else.
+`bind_knobs(cvars, spec, prefix, flags)` (`cvars.hpp`) binds each row to the game's console as
+`prefix` + its name: a set parses, clamps and writes straight into the `MoveSpec` field, so the
+step reads its own struct with no lookup. The defaults are the row's values when it is bound
+(binding moves no bit; `reset` returns to the game's row), and each cvar's help ends with its
+unit, which `ge cvar ls` prints beside the value.
+
+The default tier is the server's rules: prefix `sv_` and flags `kServer | kServerInfo`. Only the
+server's console or cfg sets them; every client gets their values in the server info and follows
+them (`Cvars::apply_info`); a client's own `set sv_gravity 100` is refused with the reason, so a
+server and its predicting clients step the same row. A single-player game that lets the player
+tune the feel binds them with its own prefix and `kArchive` instead.
+
+A server's row is a cfg file:
+
+```
+// server.cfg: a heavier, faster arena
+sv_gravity 900
+sv_maxspeed 340
+sv_airaccelerate 1
+sv_jumphold 1        // hold jump to keep hopping
+```
+
+`apply_cfg(spec, path, error)` runs one on a spec as a server's console would, with each refused
+line named by file and line, and the labs take it as `--cfg=<file>` (applied before `--set`), so
+a cfg and the same `--set` give the same digest (`tests/move_cvars_test.cpp`).
 
 ## What a camera reads
 
@@ -154,6 +172,5 @@ world's trace.
 
 ## Later
 
-M28b binds the knobs to the console; M28c brings moving ground (platforms, lifts), knock-back,
-jump pads, pushers and ladders; M28d prediction and reconciliation over the network. A capsule
+M28c brings moving ground (platforms, lifts), knock-back, jump pads, pushers and ladders; M28d prediction and reconciliation over the network. A capsule
 hull and a heightfield trace wait for a game that needs them.

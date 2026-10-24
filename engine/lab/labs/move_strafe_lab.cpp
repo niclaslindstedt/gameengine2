@@ -20,6 +20,7 @@
 #include "core/num_text.hpp"
 #include "lab/chart.hpp"
 #include "lab/lab.hpp"
+#include "move/cvars.hpp"
 #include "move/knobs.hpp"
 #include "move/scenarios.hpp"
 #include "move/strafe.hpp"
@@ -44,10 +45,19 @@ struct Track {
   }
 };
 
+// The row retuned: the server's cfg (`--cfg`, its `sv_` knobs), then `--set` over it.
+void tune(gl::Lab& lab, mv::MoveSpec& spec, bool report) {
+  std::string error;
+  const std::string& cfg = lab.arg("cfg");
+  if (!cfg.empty() && !mv::apply_cfg(spec, cfg, error) && report)
+    lab.fail("--cfg=" + cfg + ": " + error, "next: fix the cfg's lines named above and run again");
+  if (!mv::apply_knobs(spec, lab.arg("set"), error) && report)
+    lab.fail(error, "fix --set and run again");
+}
+
 mv::MoveSpec spec_for(gl::Lab& lab, const char* preset) {
   mv::MoveSpec spec = *mv::find_preset(preset);
-  std::string error;
-  if (!mv::apply_knobs(spec, lab.arg("set"), error)) lab.fail(error, "fix --set and run again");
+  tune(lab, spec, true);
   return spec;
 }
 
@@ -69,7 +79,10 @@ void shoot(gl::Lab& lab, const std::string& id, const gl::Chart& chart, const st
             chart.title,
             caption,
             look_for,
-            {{"hz", lab.arg("hz")}, {"seconds", lab.arg("seconds")}, {"set", lab.arg("set")}}},
+            {{"hz", lab.arg("hz")},
+             {"seconds", lab.arg("seconds")},
+             {"cfg", lab.arg("cfg")},
+             {"set", lab.arg("set")}}},
            gl::to_picture(chart.plot));
   lab.note(gl::chart_text(chart, 0));
 }
@@ -257,6 +270,8 @@ const gl::LabSpec kSpec{
         {"hz", "120", "steps a second"},
         {"seconds", "8", "the length of each run"},
         {"rates", "30,60,77,120,125,250", "the step rates of the rate chart"},
+        {"cfg", "",
+         "a server cfg whose sv_ knobs retune the row before --set (engine/move/cvars.hpp)"},
         {"set", "", "knobs set on every row, name=value,... (engine/move/knobs.cpp)"},
     },
     "--seconds=3 --rates=60,120",

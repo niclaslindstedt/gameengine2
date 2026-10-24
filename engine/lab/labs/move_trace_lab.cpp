@@ -20,6 +20,7 @@
 #include "core/num_text.hpp"
 #include "lab/chart.hpp"
 #include "lab/lab.hpp"
+#include "move/cvars.hpp"
 #include "move/knobs.hpp"
 #include "move/scenarios.hpp"
 
@@ -90,6 +91,16 @@ void outline(const mv::BoxWorld& w, double u, double z0, double z1, gl::Trace& t
   }
 }
 
+// The row retuned: the server's cfg (`--cfg`, its `sv_` knobs), then `--set` over it.
+void tune(gl::Lab& lab, mv::MoveSpec& spec, bool report) {
+  std::string error;
+  const std::string& cfg = lab.arg("cfg");
+  if (!cfg.empty() && !mv::apply_cfg(spec, cfg, error) && report)
+    lab.fail("--cfg=" + cfg + ": " + error, "next: fix the cfg's lines named above and run again");
+  if (!mv::apply_knobs(spec, lab.arg("set"), error) && report)
+    lab.fail(error, "fix --set and run again");
+}
+
 mv::MoveSpec spec_for(gl::Lab& lab, const mv::MoveScenario& sc) {
   const std::string& preset = lab.arg("preset");
   const mv::MoveSpec* base = mv::find_preset(preset.empty() ? sc.preset : preset.c_str());
@@ -100,8 +111,7 @@ mv::MoveSpec spec_for(gl::Lab& lab, const mv::MoveScenario& sc) {
     base = mv::find_preset(sc.preset);
   }
   mv::MoveSpec spec = *base;
-  std::string error;
-  if (!mv::apply_knobs(spec, lab.arg("set"), error)) lab.fail(error, "fix --set and run again");
+  tune(lab, spec, true);
   return spec;
 }
 
@@ -113,7 +123,10 @@ void shoot(gl::Lab& lab, const std::string& id, const gl::Chart& chart, const st
             chart.title,
             caption,
             look_for,
-            {{"preset", preset}, {"hz", lab.arg("hz")}, {"set", lab.arg("set")}}},
+            {{"preset", preset},
+             {"hz", lab.arg("hz")},
+             {"cfg", lab.arg("cfg")},
+             {"set", lab.arg("set")}}},
            gl::to_picture(chart.plot));
 }
 
@@ -195,8 +208,7 @@ void run(gl::Lab& lab) {
     // The strafe arena's ground and jump are the classic row's: its arc would hide that one.
     if (std::string(*p) == "strafe_arena") continue;
     mv::MoveSpec spec = *mv::find_preset(*p);
-    std::string error;
-    mv::apply_knobs(spec, lab.arg("set"), error);
+    tune(lab, spec, false);
     Track k;
     k.unit = spec.unit;
     k.spec = &spec;
@@ -235,6 +247,8 @@ const gl::LabSpec kSpec{
     {
         {"scenario", "all", "one scenario's id, or all"},
         {"preset", "", "run on this row instead of each scenario's own"},
+        {"cfg", "",
+         "a server cfg whose sv_ knobs retune the row before --set (engine/move/cvars.hpp)"},
         {"set", "", "knobs set on the row, name=value,... (engine/move/knobs.cpp)"},
         {"hz", "120", "steps a second"},
     },
