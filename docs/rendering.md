@@ -25,6 +25,7 @@ fast chase camera close to the ground. Per frame, at the top of its picture ladd
 | Figures | The player, a few rivals, and up to a few hundred people in a crowd, all skinned | Skinning once and drawing many times (main view and shadows) |
 | Snow marks | Trail maps stamped from the skiers' prints every frame | Render-to-texture with max blending, a fine window that follows the camera redrawn from the stamps' history, and a coarse map over the whole mountain |
 | Particles | Tens of thousands of spray, snowfall and cloud particles | Overdraw of soft transparent quads; simulated on the GPU |
+| Grass | Hundreds of thousands of blades near the eye in summer, none stored: grown from a cover of triangles every frame (`docs/grass.md`) | A compute scatter with culling and distance thinning into indirect draws; the vertex stage bends each blade in the wind |
 | Sky | A physical atmosphere, a raymarched cloud volume, a night sky, aerial perspective on every material | Lookup tables computed on the GPU; a temporal cloud buffer |
 | Light | One sun or moon, the sky's light, at most a handful of point lamps at night | No need for a many-light pipeline |
 | Shadows | The mountain shading itself over kilometres, sharp shadows under the figures | Two different problems, solved by two different techniques |
@@ -207,6 +208,9 @@ The order, with what each stage is for:
    snow shader runs exactly once, whatever the draw order. This is the direct answer to
    the ground's fragment cost, and it lets the ground's shader drop `discard`, which
    tile-based GPUs pay for across a whole draw.
+5b. **Grass** (`render/grass.hpp`, `docs/grass.md` § Drawn): its blades grown by
+   `grass.scatter` (after the frame's uniforms; any time before the draw) and drawn by `grass`
+   after the opaque colour, testing and writing the depth, as blades bent in the wind.
 6. **Sky and clouds:** the sky behind the depth buffer; the cloud volume over it (marched at a
    quarter of the pixels, a quarter of those each frame and the rest reprojected from the last,
    then upsampled by depth and resolved by TAA: § Sky).

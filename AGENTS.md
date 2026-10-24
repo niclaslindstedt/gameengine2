@@ -42,6 +42,7 @@ updates that row's status file (`docs/goals/<row>.md`) in its PR.
 | [`docs/replays.md`](docs/replays.md) | Replays, recording and broadcasting: a run kept as its inputs, keyframes and the seek, the replay file, the director, video with sound, streaming to a video service, spectating by inputs, Discord presence (M23) |
 | [`docs/shooters-edge.md`](docs/shooters-edge.md) | The second game, Shooter's Edge (M18, after Fall Line): the compatibility contract, the clean room, the homes, the protocols, the labs and the `ge` commands it needs |
 | [`docs/water.md`](docs/water.md) | Water and wind (M24): the bodies and the one query, the waves the wind grows, floating, swimming tuned per game, flowing water, the colour from what is in the water, the surface and the view under it, the sound, and the labs |
+| [`docs/grass.md`](docs/grass.md) | Grass (M34): the research, kinds and recipes, covers on a heightfield or a mesh's floors, the blade scatter, the sway in the wind, the grass drawn, and the rows |
 
 **The working area.** `porting/` holds everything that only matters while modules are
 being carried over from their reference sources: the porting guide (`porting/README.md`),
@@ -233,6 +234,7 @@ characters.
 | `engine/ai/` | The bots' layer (`ge::ai`): the decision record `ge why` reads, the hands that look human, paths, thinking on a schedule, sight and memory, steering, choosing | `bots` |
 | `engine/wind/` | The wind (`ge::wind`): a pure function of place and time over a field (mean, gusts, veer, the log-law profile, shelter, local sources); a world's wind is one field of it | `water` |
 | `engine/water/` | The water (`ge::water`): bodies and the one `sample` query, the sea a wind grows over a fetch, floating, swimming, the colour from what is in the water, flowing water and its tiers | `water` |
+| `engine/grass/` | The grass (`ge::grass`): kinds and recipes, covers from a heightfield's region or a mesh's floors, every blade scattered off its triangle's seed, a blade's sway in the engine's wind | `grass` |
 | `engine/cli/` | The `ge` command line for game repos (`cmake/Cli.cmake`): the command catalog, the answer shape and findings, and one file per command group | `agent-interface` |
 | `consumer-skills/` | The skills a game repo gets from `ge new` and `ge skills sync`, compiled into `ge`; written for a game repo, never for this one | `agent-interface` |
 | `scaffold/` | The game repo `ge new` writes, as `.in` files with placeholders, compiled into `ge` | `agent-interface` |
@@ -363,6 +365,7 @@ and the directories agree.
 | `perf` | Any optimisation, a benchmark, a profile, a cost claim |
 | `agent-interface` | Diagnostics wording, consumer skills, the `ge` CLI (M12) |
 | `water` | Water and wind: `engine/wind` (the field, gusts, the log-law profile, shelter, local sources), `engine/water` and its passes as M24's rows land (bodies, waves, floating, swimming, colour, flow), their labs |
+| `grass` | Grass: `engine/grass` (kinds and recipes, covers from a heightfield or a mesh's floors, the blade scatter, the sway in the engine's wind) and `engine/render/grass` (the GPU scatter, thinning, the blades drawn), their labs |
 | `bots` | Anything a bot decides: `engine/ai`, the decision record every bot writes, `Run::trace`, `ge why`, making a bot more human, paths and thinking on a schedule (M16) |
 | `console` | `engine/console`: a setting (cvar) added or named, its tier, cfg files and the console language, aliases, scripting, binds, the drop-down console, `ge cvar` and `ge cfg`, the `console` lab (M21) |
 | `replay` | `engine/replay`: watching a run again: a game's `Run::clone`, the keyframes and their thinning, the player's seek in a step budget, the transport; later the replay file, the instant replay, the director, spectating by inputs and the video export (M23) |
