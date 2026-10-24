@@ -1,7 +1,8 @@
 // The boom (engine/camera/boom.hpp): it stands behind the subject at its arm and over the ground,
 // keeps the subject inside its frame through every scenario (the cliff's drop included), leans
 // with the slope, widens with speed while pulling in, takes the fall look on a long fall only,
-// keeps its distance from the trunks, and snaps rather than chases a teleport.
+// keeps its distance from the trunks, snaps rather than chases a teleport, and banks with a craft
+// in the air only by its own share.
 //
 // ge:summary Tests: the boom's arm, framing, incline, stretch, fall look, trunks and teleport
 // ge:keywords test camera boom chase framing incline stretch fall-look trunks clearance teleport
@@ -118,4 +119,26 @@ TEST(a_teleport_is_snapped_not_chased) {
       CHECK(std::fabs(moved) < 2);
     }
   }
+}
+
+TEST(the_boom_banks_with_a_craft_in_the_air_by_its_own_share) {
+  const cam::World w = cam::scenario_world(*cam::find_camera_scenario("walk"));
+  auto settle = [&](const cam::BoomRow& row) {
+    cam::BoomState st;
+    cam::Pose p;
+    cam::Subject s;
+    s.grounded = false;
+    s.vel = {0, 0, 20};
+    s.q = ge::core::from_euler(0, 0, 0.5);  // banked right side down into a turn
+    for (int i = 0; i < 240; ++i) {
+      s.pos = {0, 200, 20.0 * i / 120};
+      p = cam::frame_boom(row, s, w, st, 1.0 / 120, 1, 1);
+    }
+    return p.roll;
+  };
+  cam::BoomRow row;
+  row.fall_from_m = 1e6;
+  CHECK(std::fabs(settle(row)) < 1e-3);  // a skier's boom: level in the air
+  row.bank_air = 0.6;
+  CHECK(std::fabs(settle(row) - 0.3) < 0.02);
 }

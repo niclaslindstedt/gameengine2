@@ -4,7 +4,8 @@
 // routed to the bank: sound/route.hpp), steer the ride bed off the skier, and draw the map's
 // frame (frame.hpp) at vsync, the racers drawn where the run has them, from the camera ladder on
 // the player (games/fall_line/camera: the chase to start with, C walks tips, helmet, chase, far
-// and high by its hand-overs; --view names the rung to start on, or a still view of the map).
+// and high by its hand-overs, and on a machine its own ladder: camera/machines.hpp; --view names
+// the rung to start on, or a still view of the map).
 //
 // THE SOUND: one synth, rendered on the audio device's thread (platform/audio.hpp) and fed from
 // this one through its ring. No device (a container, SDL_AUDIO_DRIVER=dummy failing) is not an
@@ -45,6 +46,7 @@
 #include "core/output.hpp"
 #include "fall_line/app/frame.hpp"
 #include "fall_line/app/views.hpp"
+#include "fall_line/camera/machines.hpp"
 #include "fall_line/camera/rungs.hpp"
 #include "fall_line/camera/subject.hpp"
 #include "fall_line/camera/world.hpp"
@@ -198,10 +200,11 @@ int main(int argc, char** argv) {
   std::vector<ge::skier::SkierState> skiers;
   skiers.reserve(run.state().racers.size());
   bool heard_out = false;
-  // The run's camera: the ladder kept warm, walked by C (games/fall_line/camera/rungs.hpp).
+  // The run's camera: the ladder kept warm, walked by C (games/fall_line/camera/rungs.hpp), and
+  // each machine's own while he rides it (machines.hpp).
   const ge::skier::World skier_world = run.state().world();
   const ge::camera::World camera_world = fall_line::camera::camera_world(skier_world);
-  fall_line::camera::RunCamera camera = fall_line::camera::make_skier_camera(rung, 1);
+  fall_line::camera::RideCamera camera = fall_line::camera::make_ride_camera(rung, 1);
   double last_frame_s = 0;
   while (args.frames == 0 || presented < args.frames) {
     ge::platform::poll_input(*window, input);
@@ -250,12 +253,12 @@ int main(int argc, char** argv) {
     std::optional<std::array<double, 3>> subject;
     if (follow && !skiers.empty()) {
       if (input.tapped(ge::platform::Key::c)) {
-        fall_line::camera::change_rung(
-            camera.cam, fall_line::camera::next_rung(fall_line::camera::rung_of(camera.cam)));
+        fall_line::camera::next_lens(camera);
       }
+      fall_line::camera::apply_ride_cvars(set.camera, camera);
       const double dt = presented == 0 ? 1.0 / 60 : view.time_s - last_frame_s;
       ge::camera::to_frame_view(
-          fall_line::camera::frame_camera(camera, skiers[0], skier_world, camera_world, dt), view);
+          fall_line::camera::frame_ride(camera, run.state(), skier_world, camera_world, dt), view);
       const ge::camera::Vec3 p = fall_line::camera::framed_point(skiers[0]);
       subject = std::array<double, 3>{p.x, p.y, p.z};
     }

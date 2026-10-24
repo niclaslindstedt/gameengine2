@@ -221,9 +221,10 @@ target_link_libraries(ge_move PUBLIC ge_core)
 # (first person, boom, mounted, orbit, planted, free), the shake, the transitions and the stack.
 # No GPU and no platform: a game hands it a subject and the world's queries and gets a pose back
 # (camera/to_view.hpp writes it into the renderer's FrameView).
+# Its cvars (camera/cvars.hpp) bind the player's settings on the console.
 file(GLOB GE_CAMERA_SOURCES CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/engine/camera/*.cpp)
 add_library(ge_camera STATIC ${GE_CAMERA_SOURCES})
-target_link_libraries(ge_camera PUBLIC ge_core)
+target_link_libraries(ge_camera PUBLIC ge_core ge_console)
 
 # The lab framework (engine/lab: the contract, the runner, the raster, the PNG), published as
 # ge::lab so a game's labs plug into the same contract as the engine's (docs/labs.md).

@@ -12,7 +12,7 @@ set_property(GLOBAL APPEND PROPERTY GE_GAME_TARGETS fall_line_sim)
 file(GLOB FALL_LINE_CFG_SOURCES CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/cfg/*.cpp)
 add_library(fall_line_cfg STATIC ${FALL_LINE_CFG_SOURCES})
 target_include_directories(fall_line_cfg PUBLIC ${PROJECT_SOURCE_DIR}/games)
-target_link_libraries(fall_line_cfg PUBLIC ge_console)
+target_link_libraries(fall_line_cfg PUBLIC ge_console ge_camera)
 set_property(GLOBAL APPEND PROPERTY GE_GAME_TARGETS fall_line_cfg)
 
 # Its `play` executable (play/): the game on the play contract, which `ge play`, `ge sim`,

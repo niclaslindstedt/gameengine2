@@ -206,9 +206,10 @@ Pose frame_boom(const BoomRow& row, const Subject& s, const World& w, BoomState&
   double look = snap ? settle(st.pitch, want_pitch) : follow(st.pitch, row.look, want_pitch, dt);
   look = core::clamp(look, to_subject - row.frame * half, to_subject + row.frame * half);
 
-  // The bank: a share of the body's roll on the ground.
+  // The bank: a share of the body's roll on the ground, and its own share in the air (a craft's
+  // turn, flown banked).
   const double body_roll = core::to_euler(s.q).roll;
-  const double bank_want = s.grounded ? body_roll * row.bank * motion : 0.0;
+  const double bank_want = body_roll * (s.grounded ? row.bank : row.bank_air) * motion;
   st.bank = snap ? bank_want : damp(st.bank, bank_want, 0.15, dt);
 
   Pose p;

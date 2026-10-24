@@ -37,6 +37,23 @@ constexpr double kMiddle = 1.0, kDownMiddle = 0.3;
 
 }  // namespace
 
+void read_moments(cam::Subject& out, double vy, bool grounded, SubjectMemory& m) {
+  if (m.framed) {
+    const double moved = core::hypot3(out.pos.x - m.x, out.pos.y - m.y, out.pos.z - m.z);
+    if (moved > kTeleportM) {
+      cam::add_moment(out, cam::Moment::teleport, 0);
+    } else if (m.air && grounded) {
+      cam::add_moment(out, cam::Moment::landing, m.fall_mps);
+    }
+  }
+  m.framed = true;
+  m.air = !grounded;
+  m.fall_mps = vy < 0 ? -vy : 0.0;
+  m.x = out.pos.x;
+  m.y = out.pos.y;
+  m.z = out.pos.z;
+}
+
 cam::Subject skier_subject(const ge::skier::SkierState& s, const ge::skier::World& world,
                            SubjectMemory& m) {
   cam::Subject out;
@@ -47,24 +64,9 @@ cam::Subject skier_subject(const ge::skier::SkierState& s, const ge::skier::Worl
   out.look_yaw = s.heading;
   out.grounded = s.on_snow;
   out.surface = s.on_snow ? s.packed : 0.0;
-  if (m.framed) {
-    const double moved = core::hypot3(s.x - m.x, s.y - m.y, s.z - m.z);
-    if (moved > kTeleportM) {
-      cam::add_moment(out, cam::Moment::teleport, 0);
-    } else if (m.air && s.on_snow) {
-      cam::add_moment(out, cam::Moment::landing, m.fall_mps);
-    }
-  }
-  m.framed = true;
-  m.air = !s.on_snow;
-  m.fall_mps = s.vy < 0 ? -s.vy : 0.0;
-  m.x = s.x;
-  m.y = s.y;
-  m.z = s.z;
+  read_moments(out, s.vy, s.on_snow, m);
   return out;
 }
-
-namespace {
 
 // The head's centre, world, m.
 core::Vec3 head_of(const ge::skier::SkierState& s, const ge::skier::World& world) {
@@ -72,6 +74,14 @@ core::Vec3 head_of(const ge::skier::SkierState& s, const ge::skier::World& world
   ge::skier::pose_figure(s, world, pieces);
   return pieces[14].centre;  // the helmet's ball (figure.cpp)
 }
+
+core::Vec3 helmet_eye(const ge::skier::SkierState& s, const ge::skier::World& world,
+                      const core::Vec3& head) {
+  const core::Vec3 ahead = core::rotate(body_of(s, world), core::Vec3{0, kEyeUp, kEyeAhead});
+  return {head.x + ahead.x, head.y + ahead.y, head.z + ahead.z};
+}
+
+namespace {
 
 void fit_eyes(cam::Camera& c, const ge::skier::SkierState& s, const ge::skier::World& world,
               const core::Vec3& head) {
@@ -97,16 +107,10 @@ RunCamera make_skier_camera(Rung start, uint32_t seed) {
   return RunCamera{make_run_camera(start, seed), SubjectMemory{}};
 }
 
-cam::Pose frame_camera(RunCamera& rc, const ge::skier::SkierState& s,
-                       const ge::skier::World& skier_world, const cam::World& camera_world,
-                       double dt) {
-  const core::Vec3 head = head_of(s, skier_world);
-  fit_eyes(rc.cam, s, skier_world, head);
-  const cam::Subject subject = skier_subject(s, skier_world, rc.memory);
-  cam::Pose p = cam::update(rc.cam, subject, camera_world, dt);
-  const bool on_helmet = rung_of(rc.cam) == Rung::helmet && !cam::in_transition(rc.cam);
+void settle_lens(cam::Pose& p, const cam::World& camera_world, const core::Vec3& head,
+                 bool clip_head, double toward_x, double toward_z) {
   const double d = core::hypot3(p.eye.x - head.x, p.eye.y - head.y, p.eye.z - head.z);
-  if (!on_helmet && d < kHeadClip) {
+  if (clip_head && d < kHeadClip) {
     const double past = d + kHeadReach;
     p.near_m = past > p.near_m ? past : p.near_m;
   }
@@ -125,14 +129,25 @@ cam::Pose frame_camera(RunCamera& rc, const ge::skier::SkierState& s,
     const double out = o.radius + kBarkClear;
     if (r >= out) continue;
     if (r < 1e-6) {  // on the axis: out toward him
-      dx = s.x - o.x;
-      dz = s.z - o.z;
+      dx = toward_x - o.x;
+      dz = toward_z - o.z;
       r = std::sqrt(dx * dx + dz * dz);
       if (r < 1e-6) dx = 1, dz = 0, r = 1;
     }
     p.eye.x = o.x + dx / r * out;
     p.eye.z = o.z + dz / r * out;
   }
+}
+
+cam::Pose frame_camera(RunCamera& rc, const ge::skier::SkierState& s,
+                       const ge::skier::World& skier_world, const cam::World& camera_world,
+                       double dt) {
+  const core::Vec3 head = head_of(s, skier_world);
+  fit_eyes(rc.cam, s, skier_world, head);
+  const cam::Subject subject = skier_subject(s, skier_world, rc.memory);
+  cam::Pose p = cam::update(rc.cam, subject, camera_world, dt);
+  const bool on_helmet = rung_of(rc.cam) == Rung::helmet && !cam::in_transition(rc.cam);
+  settle_lens(p, camera_world, head, !on_helmet, s.x, s.z);
   return p;
 }
 

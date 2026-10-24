@@ -19,6 +19,7 @@
 #include "core/num_text.hpp"
 #include "fall_line/app/frame.hpp"
 #include "fall_line/app/views.hpp"
+#include "fall_line/camera/machines.hpp"
 #include "fall_line/camera/subject.hpp"
 #include "fall_line/camera/world.hpp"
 #include "fall_line/sim/play.hpp"
@@ -187,16 +188,15 @@ bool camera(const sim::GameState& s, std::string_view name, r::FrameView& view,
   const auto& level = *s.level;
   day_view(level, -1, view);
   view.time_s = s.t;
-  // A rung of the camera ladder, settled on the player (a still has no frames before it).
-  fall_line::camera::Rung rung{};
-  if (fall_line::camera::rung_named(name, rung)) {
-    const ge::skier::SkierState& skier = s.racers[0].skier;
+  // A rung of the ladder of what he is on (his skis or a machine), settled on the player (a still
+  // has no frames before it).
+  fall_line::camera::RideCamera cam = fall_line::camera::make_ride_camera({}, 1);
+  if (fall_line::camera::set_lens(cam, s, name)) {
     const ge::skier::World sw = s.world();
-    fall_line::camera::RunCamera cam = fall_line::camera::make_skier_camera(rung, 1);
-    ge::camera::to_frame_view(fall_line::camera::frame_camera(
-                                  cam, skier, sw, fall_line::camera::camera_world(sw), 1.0 / 60),
-                              view);
-    const ge::camera::Vec3 p = fall_line::camera::framed_point(skier);
+    ge::camera::to_frame_view(
+        fall_line::camera::frame_ride(cam, s, sw, fall_line::camera::camera_world(sw), 1.0 / 60),
+        view);
+    const ge::camera::Vec3 p = fall_line::camera::framed_point(s.racers[0].skier);
     subject = std::array<double, 3>{p.x, p.y, p.z};
     return true;
   }
@@ -306,13 +306,19 @@ std::unique_ptr<ge::play::Renderer> open_renderer(std::string& error) {
   return std::make_unique<FrameRenderer>(std::move(device));
 }
 
-constexpr std::array<ge::play::View, 11> kViews{{
+// The rungs name the lens of what he is on: on a machine, a skis' rung is its counterpart on the
+// machine's ladder (camera/machines.hpp), and the machines' own rungs follow the skis'.
+constexpr std::array<ge::play::View, 15> kViews{{
     {"tips", "low over the player's ski tips: the snow coming straight at the lens"},
     {"helmet", "the player's own eyes, tipped with his lean"},
     {"chase", "behind and over the player along his way, the camera a run is watched from"},
     {"far", "the chase from further back and higher, heavier"},
     {"high", "high over and behind the player: the line through the gates ahead"},
     {"orbit", "the menu's drone, off to the side of the player"},
+    {"seat", "on a snowmobile or a helicopter: the player's own eyes on its boards or its skid"},
+    {"pilot", "under the paramotor: the player's own eyes in the harness, rolled with the wing"},
+    {"wing", "under the paramotor: from up by the canopy, behind, looking down on the player"},
+    {"down", "on a helicopter or under the paramotor: the long fall under the player"},
     {"start", "from behind the start line at a skier's eye height, down the piste"},
     {"piste", "halfway down the piste at a skier's eye height, looking down it"},
     {"lookback", "from the finish, looking back up the piste to the summit"},

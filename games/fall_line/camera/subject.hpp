@@ -26,7 +26,7 @@
 //
 // ge:summary A skier as the camera's subject: pose, frame, surface, landings, resets, worn eyes
 // ge:keywords fall-line camera subject skier frame lean landing teleport reset worn helmet tips
-// ge:keywords framed_point see-through
+// ge:keywords framed_point see-through read_moments head_of helmet_eye settle_lens
 // ge:keywords skier_subject fit_worn subject-memory frame_camera run-camera head-clip near-plane
 // ge:skill camera
 // ge:test tests/fall_line_camera_test.cpp
@@ -49,12 +49,21 @@ struct SubjectMemory {
   double x = 0, y = 0, z = 0;
 };
 
+// Read the moments (a landing, a teleport) off `out.pos` against the last frame's, with the
+// body's sinking speed `vy` and whether it is `grounded` now, into `out`; and remember this frame.
+void read_moments(ge::camera::Subject& out, double vy, bool grounded, SubjectMemory& memory);
+
 ge::camera::Subject skier_subject(const ge::skier::SkierState& s, const ge::skier::World& world,
                                   SubjectMemory& memory);
 
 // Set the camera's worn rows' eyes (tips, helmet) off the figure for `s`.
 void fit_worn(ge::camera::Camera& cam, const ge::skier::SkierState& s,
               const ge::skier::World& world);
+
+// The figure's head's centre, world m, and the helmet's eye in front of it (`head` the centre).
+ge::core::Vec3 head_of(const ge::skier::SkierState& s, const ge::skier::World& world);
+ge::core::Vec3 helmet_eye(const ge::skier::SkierState& s, const ge::skier::World& world,
+                          const ge::core::Vec3& head);
 
 // A lens nearer the head's centre than this, m, off the helmet rung, looks past the head.
 inline constexpr double kHeadClip = 0.6;
@@ -64,6 +73,12 @@ inline constexpr double kHeadReach = 0.22;
 // The least a lens stands over the snow, m, and off the bark of a trunk.
 inline constexpr double kLensFloor = 0.15;
 inline constexpr double kBarkClear = 0.12;
+
+// A framed lens settled: its near plane past his head (`head` the centre) when `clip_head` and it
+// is within `kHeadClip`, held `kLensFloor` over the snow and `kBarkClear` off a trunk's bark
+// (pushed out from a trunk's axis toward `toward_x`, `toward_z`).
+void settle_lens(ge::camera::Pose& p, const ge::camera::World& camera_world,
+                 const ge::core::Vec3& head, bool clip_head, double toward_x, double toward_z);
 
 // The point a rung frames on him, world m: his middle, the height the booms look at, nearer the
 // snow when he is down. The trees between a lens and it are seen through (app/frame.hpp's

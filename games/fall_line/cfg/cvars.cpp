@@ -118,10 +118,13 @@ void add_cvars(con::Console& c, Settings& s) {
   v.bind({.name = "cl_view",
           .fallback = "chase",
           .flags = kPlayer,
-          .help = "the camera: a rung (tips helmet chase far high orbit) or a still view (start "
-                  "piste lookback vista aerial)",
+          .help = "the camera: a rung (tips helmet chase far high orbit; on a machine its own: "
+                  "seat pilot wing down) or a still view (start piste lookback vista aerial)",
           .kind = CvarKind::text},
          &s.view);
+
+  // The camera's settings at the engine's defaults: a world in metres, the ladders' own rows.
+  ge::camera::add_camera_cvars(v, s.camera, {});
 
   v.bind({.name = "volume",
           .fallback = "0.8",

@@ -5,7 +5,7 @@
 // the ground, the horizon's roll and the subject's place in the chase's frame. For every scenario
 // and rig: the least clearance over the ground, the worst jerk of the eye against the subject, how
 // far the subject strays in the frame, and any jump of the eye that is not the scenario's own
-// teleport.
+// teleport. At --motion=0 (the player's comfort, cl_motion) every rig must hold the horizon level.
 //
 // ge:summary Lab: every reference rig through every scripted subject: sketches and charts
 // ge:keywords lab camera rigs scenarios sketch view path chart clearance jerk framing teleport
@@ -51,7 +51,7 @@ double place_in_frame(const cam::Pose& p, const cam::Subject& s) {
   return (to - p.pitch) / (p.fov_y / 2);
 }
 
-void run_scenario(gl::Lab& lab, const cam::Scenario& sc, double hz,
+void run_scenario(gl::Lab& lab, const cam::Scenario& sc, double hz, double motion,
                   std::vector<std::vector<std::string>>& rows) {
   const auto ladder = cam::reference_ladder();
   const int rigs = static_cast<int>(ladder.size());
@@ -64,6 +64,7 @@ void run_scenario(gl::Lab& lab, const cam::Scenario& sc, double hz,
   for (int i = 0; i < rigs; ++i) {
     cams.push_back(cam::make_camera(ladder.data(), rigs, 1));
     cams.back().rung = i;
+    cams.back().settings.motion = motion;
   }
   cam::ScriptRun run = cam::start_script(sc);
   int teleports = 0;
@@ -129,6 +130,18 @@ void run_scenario(gl::Lab& lab, const cam::Scenario& sc, double hz,
                    std::to_string(teleports),
                "Run tests/camera_scenarios_test.cpp and read the rig's frame in engine/camera/ "
                "(skill: camera).");
+    }
+    if (motion < 1) {
+      // Comfort turned down: every roll a rig lays on the horizon is uncommanded motion.
+      double most = 0;
+      for (const double r : tr.roll) most = std::fabs(r) > most ? std::fabs(r) : most;
+      lab.metric(rk + ".most-roll", most, "deg");
+      if (motion == 0 && most > 1e-9) {
+        lab.fail(key + " through " + std::string(ladder[i].name) + ": the horizon rolled " +
+                     sk::num(most, 3) + " deg at comfort 0",
+                 "Read where the rig scales its motion by `motion` in engine/camera/ (skill: "
+                 "camera).");
+      }
     }
     if (ladder[i].kind == cam::RigKind::boom && stray > ladder[i].boom.frame + 0.02) {
       lab.fail(key + " through " + std::string(ladder[i].name) + ": the subject strayed to " +
@@ -203,6 +216,7 @@ void run_scenario(gl::Lab& lab, const cam::Scenario& sc, double hz,
 
 void run(gl::Lab& lab) {
   const double hz = lab.arg_num("hz");
+  const double motion = lab.arg_num("motion");
   std::vector<std::vector<std::string>> rows;
   const std::string want = lab.arg("scenarios");
   for (const cam::Scenario& sc : cam::camera_scenarios()) {
@@ -210,7 +224,7 @@ void run(gl::Lab& lab) {
         ("," + want + ",").find("," + std::string(sc.id) + ",") == std::string::npos) {
       continue;
     }
-    run_scenario(lab, sc, hz, rows);
+    run_scenario(lab, sc, hz, motion, rows);
   }
   lab.table(
       {"every rig through every scenario at " + sk::num(hz, 0) + " Hz",
@@ -233,6 +247,9 @@ const gl::LabSpec kSpec{
     {
         {"scenarios", "all", "comma-separated scenario ids (camera_scenarios), or all"},
         {"hz", "60", "the display rate the cameras run at"},
+        {"motion", "1",
+         "comfort (cl_motion), 0 .. 1; under 1 each rig's most roll is measured, and at 0 any "
+         "roll fails"},
     },
     "--scenarios=stairs,cliff",
     run,

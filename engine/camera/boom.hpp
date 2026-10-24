@@ -22,7 +22,8 @@
 //                  in under braking (`surge_m_per_mps2`, capped). THE TREMOR: past
 //                  `tremor_from_mps` the lens buzzes, more on rough ground (`Subject::surface`),
 //                  none in the air.
-//   THE BANK       the horizon takes `bank` of the subject's roll on the ground.
+//   THE BANK       the horizon takes `bank` of the subject's roll on the ground, and `bank_air`
+//                  of it in the air (0: level; a craft's chase banks with its turns).
 //   THE FALL LOOK  when the subject's ballistic arc says it still has `fall_from_m` to fall, the
 //                  arm climbs over its back toward `fall_up` and the look tips down to hold the
 //                  landing; let go over a second once it is back on the ground.
@@ -82,6 +83,7 @@ struct BoomRow {
   double frame = 0.66;  // share of the half-fov it is never let out of
   Poles look{1.6, 0.85, 0.0};
   double bank = 0.12;
+  double bank_air = 0;      // the share of its roll in the air
   double fall_from_m = 12;  // the fall still to come that brings the fall look in
   double fall_up = 1.1;     // rad over the subject the arm climbs to
   double fall_reach = 1.3;  // the arm's length in it, a share
