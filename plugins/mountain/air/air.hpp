@@ -4,7 +4,8 @@
 // seed, so the same map at the same second has the same air on every machine and in every replay,
 // and nothing here draws from a run's generator.
 //
-// - THE WIND (`wind_at`): the dealt 10 m mean times one plus three gusts (6.3, 17.9 and 53 s
+// - THE WIND (`wind_at`, the engine's `wind::Field` the map deals, `field_of`): the dealt 10 m mean
+// times one plus three gusts (6.3, 17.9 and 53 s
 //   periods, 0.14, 0.2 and 0.16 of the mean), veering up to 0.22 rad either way on a 41 s swing.
 //   IT NEVER BLOWS UP THE MOUNTAIN: a bearing that would carry the air against +z (the fall line)
 //   is mirrored across the slope (`downhill_from`), so an even deal round the compass becomes an
@@ -22,13 +23,14 @@
 // same two functions.
 //
 // ge:summary The wind and the falling snow at a moment: gusts, veer, squalls, visibility
-// ge:keywords air wind gust veer downhill_from wind_at fall_at snowfall squall visibility
+// ge:keywords air wind gust veer downhill_from wind_at field_of fall_at snowfall squall visibility
 // ge:keywords visibility_in weather blizzard flurries storm
 // ge:skill mountain
 // ge:test tests/mountain_air_test.cpp
 #pragma once
 
 #include "mountain/mapgen/types.hpp"
+#include "wind/field.hpp"
 
 namespace ge::mountain::air {
 
@@ -48,6 +50,11 @@ struct Fall {
 // The bearing a wind FROM `from` really blows from: mirrored across the slope when it would blow
 // up it, unchanged otherwise. Continuous through the fold.
 double downhill_from(double from);
+
+// The map's wind as the engine's field (engine/wind): the dealt mean and bearing, the three gusts
+// and the veer with their phases hashed off the map's seed, the downhill fold, a snowfield's
+// roughness. `wind_at` is the field's open air at 10 m, bit for bit what it was before the field.
+wind::Field field_of(const mapgen::Level& level);
 
 Wind wind_at(const mapgen::Level& level, double t);
 Fall fall_at(const mapgen::Level& level, double t);

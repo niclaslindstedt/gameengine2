@@ -17,7 +17,9 @@ plugins/<name>           reusable by any game of one genre or world (§ Plugins)
         │                skier (the skier on the snow: step_skier, snow, limits, the pilot),
         │                snowmobile (the machine on the snow: step_sled, the drive, the pilot),
         │                helicopter (the machine in the air: step_heli, the wash, the pilot),
-        │                paramotor (the speed wing a skier flies: step_para, the air, the pilot)
+        │                paramotor (the speed wing a skier flies: step_para, the air, the pilot),
+        │                rooms (the engine's own level format: rooms grown from their seeds),
+        │                brush (the classic BSP families read into one view, fixture writers)
         ▼
 engine/render  engine/audio  engine/ui     generic draw passes, the synth, the 2D layer
         │             │          │
@@ -129,6 +131,15 @@ One direction of dependency, held by `tools/check-agents.sh` once each layer exi
   hands, thinking on a schedule, sight and memory, paths, steering, choosing) land here, each
   with its first user (`docs/goals.md` § M16). It depends on `engine/core` alone and is
   simulation code: deterministic, no platform, no `<cmath>` transcendental.
+- **`engine/wind`**: the wind (`ge::wind`) as a pure function of place and time over a field
+  built once (the mean, gusts and veer, the log-law profile, shelter, a world's rule on
+  bearings, local sources from the game's state); a world's wind is one field of it (the
+  mountain's, `mountain::air::field_of`). It depends on `engine/core` alone and is simulation
+  code (`docs/water.md` § Wind).
+- **`engine/water`**: the water (`ge::water`): bodies laid in one call each (a lake, an ocean, a
+  river, a volume of hulls) and the one `sample` query everything reads, the sea a wind grows
+  over each point's fetch and the components the simulation sums. It depends on `engine/core`
+  and `engine/wind` and is simulation code (`docs/water.md`).
 - **`engine/prof`**: the profiler (`ge::prof`): timing zones (`GE_ZONE("name")`, one relaxed
   load when no recording runs; a span with its depth, time and allocations when one does), their
   totals (a zone's own time and its children's), the counting `operator new` an executable

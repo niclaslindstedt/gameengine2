@@ -310,7 +310,9 @@ const kDarkestLux = 1e-4;
 fn white_luminance() -> f32 {
   let sun = key_at_eye() * frame.sun.w * frame.weather.x * max(frame.sun.y, 0.0);
   let sky = sky_irradiance(vec3f(0.0, 1.0, 0.0));
-  return max(dot((sun + sky) / PI, kLuma), kDarkestLux * frame.world.y / (PI * kSunLux));
+  // The scene's own lights (a lava lake at night) key it when they outshine the sky.
+  return max(max(dot((sun + sky) / PI, kLuma), frame.mist.z),
+             kDarkestLux * frame.world.y / (PI * kSunLux));
 }
 
 // THE EXPOSURE: the scale that maps a white Lambertian surface under this sun and sky to

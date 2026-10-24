@@ -1,0 +1,5 @@
+# family bytes triangles file-digest view-digest (brush_read_test)
+0 f67c 60 76e82108227f88e3 b61726471909997e
+1 ff28 60 cf68b7e49b2eb589 4e909e334a8c5d87
+2 9f78 60 d9c5d18bfbd604ef 8148a26d263173b4
+3 1c993 f0 8b1e27313bc2fe32 c62555744aa40f1d

@@ -167,7 +167,7 @@ AGENTS.md and the non-goals in `docs/goals.md` state this exception.
 | --- | --- | --- |
 | Fixed-step simulation, deterministic | `loop/run_clock` at 120 Hz; `core/libm`; goldens; labs as determinism tests | The server's frame runs on the run clock at its own rate (77 Hz, the classic tick); each player's move runs on its usercmd's milliseconds, as the protocol defines it. QC floats are 32-bit and its math builtins call `core/libm`, so a server replays to the bit from its input log (M18c, M18f) |
 | Files and archives | Embedded blobs; the labs' inflater | `engine/vfs`, inflate shipped (M18a) |
-| A map format with visibility and collision | A heightfield world (`plugins/mountain`) | `plugins/brush` (M18b) |
+| A map format with visibility and collision | A heightfield world (`plugins/mountain`) | `plugins/brush` (reading: M32b; collision: M18b) |
 | Scripting for mods | None, by design | `plugins/progs`, the stated exception (M18c, M18d) |
 | Player movement and weapons | `engine/move` (M28): the mover for any genre, the classic arena row among its presets, strafe jumping charted (`docs/movement.md`) | The classic row checked against recordings, the clip hulls answering the mover's trace, the weapons: `plugins/shooter` (M18e) |
 | A server with many clients | `engine/net` links, channels, sessions, NAT, the simulated network, captures | The server's frame and clients (M18f); the compatible protocol (M18g); the native one on M17f's replication (M18h) |

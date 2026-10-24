@@ -40,6 +40,7 @@ router's Skills table and the directories against each other.
 | `debug` | Log channels and dumps, series traces, the outlier rule, the chart kit, `ge graph` |
 | `perf` | Budgets, measuring, the proofs a speed-up owes, the levers |
 | `agent-interface` | Diagnostics as prompts, consumer skills, the `ge` CLI |
+| `water` | Water and wind: the wind's field and sources, bodies of water, waves, floating, swimming, colour, flow, and their labs |
 | `bots` | What a bot decides: `engine/ai`, the decision record, `ge why`, making a bot more human |
 | `console` | Cvars and their tiers, cfg files, the console language, binds, the drop-down console, `ge cvar` and `ge cfg` |
 | `replay` | Watching a run again: a game's clone, the keyframes, the player's seek, the transport; later the replay file, the director, spectating and the video export |
@@ -58,3 +59,5 @@ One skill per plugin, named after it (`docs/architecture.md` § Plugins).
 | `snowmobile` | `plugins/snowmobile`: the snowmobile on the snow, what throws its rider, the bot's hands on it and the sled scenarios |
 | `helicopter` | `plugins/helicopter`: the helicopter in the air and on the snow, the downwash, the bot's hands on it and the heli scenarios |
 | `paramotor` | `plugins/paramotor`: the powered speed wing a skier flies, the air it flies in, the bot's hands on it and the para scenarios |
+| `brush` | `plugins/brush`: maps in the classic BSP families read into one view, the fixture writers that make test maps of each, and the `bsp` lab |
+| `rooms` | `plugins/rooms`: the engine's own level format, rooms of plain geometry grown from their seeds (reliefs, caves), its text form and its lab |

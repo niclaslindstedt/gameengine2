@@ -3,4 +3,4 @@
 # scenarios that stage him. Any skiing game on a generated mountain links it (skill: skier).
 # Its app/ half (ge_skier_app) is the sound a skier makes (the wind and the snow beds) and his
 # figure: the rig, its pose and the skinned model posed by it (links assets).
-ge_add_plugin(skier ENGINE core ai PLUGINS mountain APP audio assets)
+ge_add_plugin(skier ENGINE core ai wind water PLUGINS mountain APP audio assets)

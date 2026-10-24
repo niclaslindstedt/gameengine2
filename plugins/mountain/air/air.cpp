@@ -1,7 +1,7 @@
 // The wind's gusts and veer, the fall's squalls, and the visual range through it.
 //
 // ge:summary The wind and the falling snow at a moment: definitions
-// ge:keywords air wind gust veer fall squall visibility phase hash
+// ge:keywords air wind gust veer fall squall visibility phase hash field_of
 // ge:skill mountain
 // ge:test tests/mountain_air_test.cpp
 #include "mountain/air/air.hpp"
@@ -72,20 +72,27 @@ double downhill_from(double from) {
   return core::libm::cos(from) > 0 ? kPi - from : from;
 }
 
-Wind wind_at(const mapgen::Level& level, double t) {
-  const mapgen::Weather& w = level.weather;
-  double g = 0, total = 0;
+wind::Field field_of(const mapgen::Level& level) {
+  wind::Field f;
+  f.mean = level.weather.wind;
+  f.from = level.weather.wind_from;
+  f.gusts = 3;
   for (uint32_t i = 0; i < 3; ++i) {
-    g += kGusts[i].share * core::libm::sin(kTau * t / kGusts[i].period + wind_phase(level, i + 1));
-    total += kGusts[i].share;
+    f.gust[i] = {kGusts[i].period, kGusts[i].share, wind_phase(level, i + 1)};
   }
+  f.veer = {kVeerPeriod, kVeer, wind_phase(level, 9)};
+  f.fold = downhill_from;
+  f.roughness = wind::kRoughness::snow;
+  return f;
+}
+
+Wind wind_at(const mapgen::Level& level, double t) {
+  const wind::Air a = wind::open_at(field_of(level), t);
   Wind out;
-  out.speed = core::num::max(0.0, w.wind * (1 + g));
-  const double veer = kVeer * core::libm::sin(kTau * t / kVeerPeriod + wind_phase(level, 9));
-  const double toward = downhill_from(w.wind_from + veer) + kPi;
-  out.x = core::libm::sin(toward) * out.speed;
-  out.z = core::libm::cos(toward) * out.speed;
-  out.gust = 0.5 + 0.5 * g / total;
+  out.x = a.x;
+  out.z = a.z;
+  out.speed = a.speed;
+  out.gust = a.gust;
   return out;
 }
 

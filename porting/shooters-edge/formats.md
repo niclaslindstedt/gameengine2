@@ -78,10 +78,78 @@ Header: the version (i32, 29), then 15 lumps, each an offset and a length (two i
 
 ## BSP2
 
-The larger-limits variant: the magic `BSP2` (or `2PSB` for an early form) in place of the
-version, the same lumps with node, leaf, face, edge, clipnode and marksurface indices widened
-to 32 bits and bounds stored as floats (spec; field by field to be written with M18b and
-measured on a free BSP2 map).
+The larger-limits variant: the magic `BSP2` in place of the version, the same fifteen lumps, with
+these records widened (spec; written and read by `plugins/brush`, measured on a free BSP2 map:
+verify):
+
+| Lump | Size | Fields |
+| --- | --- | --- |
+| nodes | 44 | plane (i32), children (2 i32), mins (3 f32), maxs (3 f32), first face (u32), face count (u32) |
+| clipnodes | 12 | plane (i32), children (2 i32) |
+| leafs | 44 | contents (i32), vis offset (i32), mins (3 f32), maxs (3 f32), first marksurface (u32), count (u32), ambient (4 u8) |
+| faces | 28 | plane (i32), side (i32), first surfedge (i32), edge count (i32), texinfo (i32), styles (4 u8), lightmap offset (i32) |
+| marksurfaces | 4 | u32 |
+| edges | 8 | two u32 |
+
+An early form with the magic `2PSB` kept 16-bit bounds; it is refused (verify whether any free map
+needs it before M18b).
+
+## BSP version 38
+
+Header: `IBSP`, version 38 (i32), 19 lumps (offset, length). Spec throughout; to be measured on a
+free map of this family.
+
+| # | Lump | Size | Fields |
+| --- | --- | --- | --- |
+| 0 | entities | — | text |
+| 1 | planes | 20 | normal (3 f32), dist (f32), type (i32) |
+| 2 | vertices | 12 | 3 f32 |
+| 3 | visibility | — | cluster count (i32), then per cluster two offsets from the lump's start (PVS, PHS: i32), then run-length rows as in 29 |
+| 4 | nodes | 28 | plane (i32), children (2 i32), mins (3 i16), maxs (3 i16), first face (u16), count (u16) |
+| 5 | texinfo | 76 | s and t vectors (8 f32), flags (i32: 0x1 light, 0x4 sky, 0x8 warp, 0x10/0x20 translucent, 0x40 flowing, 0x80 no draw), value (i32), texture name (32 bytes), next texinfo of an animation (i32, −1 none) |
+| 6 | faces | 20 | plane (u16), side (i16), first surfedge (i32), edge count (i16), texinfo (i16), styles (4 u8), lightmap offset (i32, into RGB bytes) |
+| 7 | lighting | — | three bytes a luxel |
+| 8 | leafs | 28 | contents (i32, a bit set: 1 solid), cluster (i16), area (i16), mins (3 i16), maxs (3 i16), first leaf face (u16), count (u16), first leaf brush (u16), count (u16) |
+| 9 | leaffaces | 2 | u16 |
+| 10 | leafbrushes | 2 | u16 |
+| 11 | edges | 4 | two u16 |
+| 12 | surfedges | 4 | i32 |
+| 13 | models | 48 | mins, maxs, origin (3 f32 each), head node (i32), first face (i32), face count (i32) |
+| 14 | brushes | 12 | first side (i32), side count (i32), contents (i32) |
+| 15 | brushsides | 4 | plane (u16), texinfo (i16) |
+| 16 | pop | — | unused bytes |
+| 17 | areas | 8 | area portal count (i32), first area portal (i32) |
+| 18 | areaportals | 8 | portal number (i32), other area (i32) |
+
+## BSP version 46
+
+Header: `IBSP`, version 46 (i32), 17 lumps (offset, length). Spec throughout; to be measured on a
+free map of this family.
+
+| # | Lump | Size | Fields |
+| --- | --- | --- | --- |
+| 0 | entities | — | text |
+| 1 | shaders | 72 | name (64 bytes), surface flags (i32; 0x4 sky), contents (i32; 1 solid, 8 lava, 16 slime, 32 water) |
+| 2 | planes | 16 | normal (3 f32), dist (f32) |
+| 3 | nodes | 36 | plane (i32), children (2 i32), mins (3 i32), maxs (3 i32) |
+| 4 | leafs | 48 | cluster (i32, −1 none), area (i32), mins (3 i32), maxs (3 i32), first leaf face (i32), count (i32), first leaf brush (i32), count (i32) |
+| 5 | leaffaces | 4 | i32 |
+| 6 | leafbrushes | 4 | i32 |
+| 7 | models | 40 | mins, maxs (3 f32 each), first face (i32), count (i32), first brush (i32), count (i32) |
+| 8 | brushes | 12 | first side (i32), count (i32), shader (i32) |
+| 9 | brushsides | 8 | plane (i32), shader (i32) |
+| 10 | vertexes | 44 | position (3 f32), texture coordinates (2 f32, whole textures), lightmap coordinates (2 f32, across a page), normal (3 f32), colour (4 u8) |
+| 11 | meshverts | 4 | i32, an offset from the face's first vertex |
+| 12 | effects | 72 | name (64 bytes), brush (i32), unused (i32) |
+| 13 | faces | 104 | shader, effect, type (1 polygon, 2 patch, 3 mesh, 4 billboard), first vertex, vertex count, first meshvert, meshvert count, lightmap page (i32 each); lightmap start and size (2 i32 each); lightmap origin (3 f32), its s and t vectors (2 × 3 f32); normal (3 f32); a patch's control grid size (2 i32) |
+| 14 | lightmaps | 49152 | a 128 × 128 RGB page |
+| 15 | lightvols | 8 | ambient RGB, directional RGB, direction (2 u8) |
+| 16 | visdata | — | cluster count (i32), row bytes (i32), then the rows, uncompressed |
+
+- **Patches**: a grid of control points, both sizes odd, read as biquadratic Bézier pieces of
+  3 × 3 points sharing their edges.
+- **Winding**: polygons and meshes are wound clockwise seen from the front in the files we write;
+  the reader checks against the normals rather than trusting it.
 
 ## MDL (alias model)
 

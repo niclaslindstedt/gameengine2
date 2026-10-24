@@ -83,6 +83,19 @@ bool project(const Basis& b, const double* p, double* x, double* y, double* inv)
   return true;
 }
 
+// A perspective view's near plane, m in front of the eye: a triangle reaching behind it is cut
+// there rather than dropped, so a room's big floor still draws with the eye standing on it.
+constexpr double kNear = 0.05;
+
+// The camera-space point (right, up, forward) of `p`.
+void to_camera(const Basis& b, const double* p, double* out) {
+  double d[3];
+  sub(p, b.eye, d);
+  out[0] = dot(d, b.r);
+  out[1] = dot(d, b.u);
+  out[2] = dot(d, b.f);
+}
+
 // The panel being drawn, supersampled: its colour and its depth (1 / depth, 0 nothing).
 struct Canvas {
   int w, h;
@@ -340,7 +353,8 @@ void draw_shape(Picture& pic, int x0, int y0, int w, int h, const ViewCam& cam, 
   }
 
   // Each vertex lit: a key over the right shoulder from the front, a cool fill, an ambient.
-  const double key[3] = {0.45, 0.75, 0.48}, fill_l[3] = {-0.6, 0.2, -0.5};
+  const double* key = st.key;
+  const double fill_l[3] = {-0.6, 0.2, -0.5};
   const size_t n = s.part.size();
   std::vector<double> sx(n), sy(n), si(n);
   std::vector<uint8_t> seen(n);
@@ -355,16 +369,18 @@ void draw_shape(Picture& pic, int x0, int y0, int w, int h, const ViewCam& cam, 
     for (int ch = 0; ch < 3; ++ch) {
       const double base = rgb ? rgb[ch] : 0.6;
       const double sky = ch == 2 ? 0.30 : 0.24;
-      lit[v * 3 + size_t(ch)] = static_cast<float>(base * (0.95 * k + sky * f + 0.22));
+      lit[v * 3 + size_t(ch)] =
+          static_cast<float>(st.baked ? base : base * (0.95 * k + sky * f + 0.22));
     }
   }
   struct Tri {
     uint32_t v[3];
   };
-  std::vector<Tri> front;
+  std::vector<Tri> front, cut;
   for (size_t t = 0; t + 2 < s.idx.size(); t += 3) {
     const uint32_t v[3] = {s.idx[t], s.idx[t + 1], s.idx[t + 2]};
-    if (!seen[v[0]] || !seen[v[1]] || !seen[v[2]]) continue;
+    const bool whole = seen[v[0]] && seen[v[1]] && seen[v[2]];
+    if (!whole && (b.ortho || (!seen[v[0]] && !seen[v[1]] && !seen[v[2]]))) continue;
     // Facing: the vertices' normals against the way from the eye.
     double nsum[3] = {0, 0, 0}, mid[3] = {0, 0, 0};
     for (uint32_t k : v) {
@@ -380,7 +396,7 @@ void draw_shape(Picture& pic, int x0, int y0, int w, int h, const ViewCam& cam, 
       sub(b.eye, mid, toward);
     }
     if (dot(nsum, toward) < 0) continue;
-    front.push_back({{v[0], v[1], v[2]}});
+    (whole ? front : cut).push_back({{v[0], v[1], v[2]}});
   }
   if (st.shade) {
     for (const Tri& t : front) {
@@ -393,6 +409,53 @@ void draw_shape(Picture& pic, int x0, int y0, int w, int h, const ViewCam& cam, 
         for (int ch = 0; ch < 3; ++ch) l[k][ch] = lit[at + size_t(ch)];
       }
       fill(c, x, y, inv, l);
+    }
+    // The triangles that reach behind the eye, cut at the near plane: one or two to fill.
+    for (const Tri& t : cut) {
+      double q[4][3];
+      float ql[4][3];
+      int nq = 0;
+      double cam_p[3][3];
+      for (int k = 0; k < 3; ++k) {
+        const size_t at = size_t(t.v[k]) * 3;
+        const double p[3] = {s.pos[at], s.pos[at + 1], s.pos[at + 2]};
+        to_camera(b, p, cam_p[k]);
+      }
+      for (int k = 0; k < 3; ++k) {
+        const int j = (k + 1) % 3;
+        const double* a = cam_p[k];
+        const double* e = cam_p[j];
+        const float* la = &lit[size_t(t.v[k]) * 3];
+        const float* le = &lit[size_t(t.v[j]) * 3];
+        const bool a_in = a[2] >= kNear, e_in = e[2] >= kNear;
+        if (a_in) {
+          for (int i = 0; i < 3; ++i) q[nq][i] = a[i], ql[nq][i] = la[i];
+          ++nq;
+        }
+        if (a_in != e_in) {
+          const double u = (kNear - a[2]) / (e[2] - a[2]);
+          for (int i = 0; i < 3; ++i) {
+            q[nq][i] = a[i] + (e[i] - a[i]) * u;
+            ql[nq][i] = static_cast<float>(la[i] + (le[i] - la[i]) * u);
+          }
+          ++nq;
+        }
+      }
+      double px[4], py[4], pi[4];
+      for (int k = 0; k < nq; ++k) {
+        px[k] = b.cx + q[k][0] / q[k][2] * b.focal;
+        py[k] = b.cy - q[k][1] / q[k][2] * b.focal;
+        pi[k] = 1.0 / q[k][2];
+      }
+      for (int k = 1; k + 1 < nq; ++k) {
+        const double x[3] = {px[0], px[k], px[k + 1]};
+        const double y[3] = {py[0], py[k], py[k + 1]};
+        const double inv[3] = {pi[0], pi[k], pi[k + 1]};
+        const float l[3][3] = {{ql[0][0], ql[0][1], ql[0][2]},
+                               {ql[k][0], ql[k][1], ql[k][2]},
+                               {ql[k + 1][0], ql[k + 1][1], ql[k + 1][2]}};
+        fill(c, x, y, inv, l);
+      }
     }
   }
   if (st.wire) {

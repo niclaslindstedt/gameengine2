@@ -185,7 +185,9 @@ double pre_exposure(const FrameView& view) {
   if (sun >= 0) return 1;
   const double moonlight =
       moonlight_on_ground(n.moon_illuminance * kSunLux, n.moon_elevation) * (1 + kMoonSky);
-  const double lux = twilight_lux(sun) + moonlight + n.dark_light * kSunLux;
+  // The scene's own lights count as the illuminance that would light a white face to them.
+  const double lux =
+      std::max(twilight_lux(sun) + moonlight + n.dark_light * kSunLux, view.adapt_cd * kPi);
   return std::max(1.0, 0.25 * kPi * kSunLux / std::max(lux, 1e-4));
 }
 

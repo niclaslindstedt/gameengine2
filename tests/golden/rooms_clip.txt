@@ -1,0 +1,2 @@
+# points steps rooms end-x end-y end-z (rooms_clip_test, GE_GOLDEN_WRITE=1)
+3a dab a 400f2284512908f0 3f50000000000000 3fe44fe4c7cf7631

@@ -1,0 +1,11 @@
+# room vertices triangles digest (rooms_build_test, GE_GOLDEN_WRITE=1)
+0 118 9c 957560bb775d3170
+1 383b 6a66 b4bc50f4286aafc0
+2 2e0f 5b56 f6dc6cc64fb84426
+3 19f8 3312 a5fdc2cbb7627fba
+4 2c 1c ff12e0133e2acfa5
+5 73d4 e024 1671f89be67a27c8
+6 702d d82c 13417a55004bc510
+7 742e e15a fec0ec2ec6105ab0
+8 70fc dab0 f2b48c6f0003ce1a
+9 88dd 1092a e1144139468b1922

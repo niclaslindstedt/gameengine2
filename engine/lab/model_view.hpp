@@ -79,11 +79,15 @@ struct ViewStyle {
   bool wire = false;
   bool bones = false;
   bool labels = false;  // the joints' names beside the bones
+  bool baked = false;   // every vertex at its material's own colour: light baked into it (a map's
+                        // lightmaps), no key, fill or ambient over it
   bool floor = true;    // a grid on the box's floor, a line a metre
   Rgba background{24, 26, 32};
   Rgba edge{255, 255, 255, 70};
   Rgba bone{255, 210, 60};
-  int supersample = 2;  // 1..4
+  int supersample = 2;                 // 1..4
+  double key[3] = {0.45, 0.75, 0.48};  // the key light's way (toward it), world; a raking one
+                                       // brings a surface's relief out
 };
 
 // `shape` of `model` (for its materials and joint names) through `cam` into the panel at

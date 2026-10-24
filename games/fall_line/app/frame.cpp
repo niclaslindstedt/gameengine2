@@ -55,6 +55,9 @@ constexpr r::PassRow kPassTable[] = {
     {"clouds.fresh", "depth sky.aerial sky.light", "clouds.fresh"},
     {"clouds.march", "depth clouds.history clouds.fresh sky.aerial sky.light", "clouds.quarter"},
     {"clouds", "depth clouds.quarter sky.aerial sky.light", "hdr"},
+    {"water.copy", "hdr depth", "water.scene"},
+    {"water", "water.scene sky.view sky.aerial sky.light depth", "hdr motion depth"},
+    {"water.under", "water.scene sky.light", "hdr"},
     {"particles", "particles terrain.horizon shadows.maps sky.aerial sky.light depth",
      "hdr motion"},
     {"snowfall", "snowfall terrain.horizon sky.aerial sky.light depth", "hdr motion"},
@@ -85,6 +88,8 @@ void make_targets(ge::gpu::Device& device, GameFrame& f, uint32_t w, uint32_t h)
   r::bind_particle_targets(device, f.particles, f.targets);
   r::bind_snowfall_targets(device, f.snowfall, f.targets);
   r::bind_cloud_targets(device, f.clouds, f.targets);
+  r::create_water_targets(device, f.water, f.targets);
+  r::bind_underwater(device, f.under, f.water);
   // The post pass (and the bloom) read TAA's two histories, or the HDR target for both.
   wgpu::TextureView inputs[2] = {f.targets.hdr_view, f.targets.hdr_view};
   if (f.options.taa) {
@@ -205,6 +210,8 @@ std::unique_ptr<GameFrame> create_frame(ge::gpu::Device& device,
   r::create_snowfall(device, f->pipelines, f->snowfall, f->frame_layout, f->terrain,
                      options.flakes);
   r::create_clouds(device, f->pipelines, f->clouds, f->frame_layout);
+  r::create_water(device, f->pipelines, f->water, f->frame_layout);
+  r::create_underwater(device, f->pipelines, f->under, f->frame_layout);
   r::create_hiz_pipelines(device, f->pipelines, f->hiz);
   r::create_instance_pipelines(device, f->pipelines, f->instancing, f->frame_layout,
                                options.overdraw_probe, options.wire_probe);
@@ -263,6 +270,15 @@ std::unique_ptr<GameFrame> create_frame(ge::gpu::Device& device,
   make_targets(device, *f, width, height);
   f->recorder.init(device, "frame.timer", kPasses);
   return f;
+}
+
+int add_water(ge::gpu::Device& device, GameFrame& f, const ge::water::Body& body,
+              const r::WaterDraw& draw) {
+  return r::add_water_body(device, f.water, body, draw);
+}
+
+void set_water(ge::gpu::Device& device, GameFrame& f, int index, const ge::water::Body& body) {
+  r::set_water_body(device, f.water, index, body);
 }
 
 void resize(ge::gpu::Device& device, GameFrame& f, uint32_t width, uint32_t height) {
@@ -368,6 +384,11 @@ void draw(ge::gpu::Device& device, GameFrame& f, const r::FrameView& seen, const
   {
     GE_ZONE("frame.terrain");
     r::prepare_terrain(device, f.terrain, view);
+  }
+  {
+    GE_ZONE("frame.water");
+    r::prepare_water(device, f.water, view);
+    r::prepare_underwater(device, f.under, f.water, view, f.targets.height);
   }
   if (f.tracks) {
     GE_ZONE("frame.trails");
@@ -493,6 +514,8 @@ void draw(ge::gpu::Device& device, GameFrame& f, const r::FrameView& seen, const
   r::encode_sky(f.sky, f.pipelines, f.recorder, encoder, f.targets, f.frame_group);
   r::encode_clouds(f.clouds, f.pipelines, f.recorder, encoder, f.targets, f.frame_group, view,
                    f.staged);
+  r::encode_water(f.water, f.pipelines, f.recorder, encoder, f.targets, f.frame_group);
+  r::encode_underwater(f.under, f.pipelines, f.recorder, encoder, f.targets, f.frame_group);
   r::encode_particles(f.particles, f.pipelines, f.recorder, encoder, f.targets, f.frame_group);
   r::encode_snowfall(f.snowfall, f.pipelines, f.recorder, encoder, f.targets, f.frame_group);
   if (f.options.taa) {
