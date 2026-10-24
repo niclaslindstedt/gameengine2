@@ -1,6 +1,6 @@
 ---
 name: ui
-description: "Use for engine/ui and any game's menus, HUD and cards in gameengine2: the immediate-mode 2D layer (paints, the draw list, images, fonts over stb_truetype, the CPU raster), backdrops (colour, gradient, drifting picture, the live scene, scrims), menus as a model and a view (pages, items, focus, events, the responsive layout), the `menu` lab, the strings table, the HUD readouts and presses, the shell's cards and settings, and the Dear ImGui developer UI."
+description: "Use for engine/ui and any game's menus, HUD and cards in gameengine2: engine/charset (the bitmap fonts, noise layers and text looks), the immediate-mode 2D layer (paints, the draw list, images, fonts over stb_truetype, the CPU raster), backdrops (colour, gradient, drifting picture, the live scene, scrims), menus as a model and a view (pages, items, focus, events, the responsive layout), the `menu` lab, the strings table, the HUD readouts and presses, the shell's cards and settings, and the Dear ImGui developer UI."
 ---
 
 # UI
@@ -35,6 +35,28 @@ is the design; this skill is how to work in it.
   the highlight and fades a page in, stepped by the caller's dt so a recorded run draws the same.
   `layout_problems` names what a screenshot would show wrong.
 
+## The charsets (`engine/charset/`, `docs/charsets.md`)
+
+- Ten monospaced ASCII fonts, each committed at 256, 512 and 1024 px as one channel of
+  coverage on a 16 x 8 grid of 1:2 cells. A byte's cell is `cell_rect(size, code_of(byte))`,
+  and the advance is the cell's width (half its height). `atlas_size_for(cell_h)` picks the
+  atlas to shrink from. Codes 1..31 are UI symbols (`Sym`), 10 stays empty, and 127 is the
+  missing glyph.
+- The fonts are built, not drawn by hand. Seven share one set of skeletons
+  (`design_glyphs.cpp`, a small path language) stroked by each font's `Style` (`charset.cpp`'s
+  `style_of`). Terminal and matrix are pixel art (`pixel_art.cpp`), and segment is bars. To
+  change a glyph, edit its skeleton or its art. Then rewrite the atlases with
+  `GE_GOLDEN_WRITE=1 build/<preset>/tests/charset_charset_test`, and show `make lab
+  LAB=charsets` before and after.
+- No ink may touch a cell's outer pixel ring at 256 px; only the box lines and shades reach the
+  edge, so that they tile. `fit` in `pen.cpp` narrows a glyph that is too wide.
+- Effects are a `Look` (fill, erode, outline, shadow, glow, bevel, overlay) over the tileable
+  layers. Sizes are shares of the cell height, so a look stays the same at any text size.
+  `paint_text` is the CPU reference, and `make lab LAB=charset-looks` pictures it. A GPU text
+  pass (M27b) must match it.
+- Every new code, font or look must stay ASCII, monospaced, and our own drawing. Never trace or
+  embed outside font data.
+
 ## Rules
 
 - **Every word the player reads** comes from the game's strings table; a menu item's `text` and
@@ -65,4 +87,6 @@ camera, the REPRO line). It is never on a release path.
   highlight's glide, a page's fade and a picture's drift, every picture captioned. Its smoke
   digest is in `tests/labs_digests.txt`: a change to the raster, a font or the layout moves it, so
   look at the pictures, then rewrite the row (`--write-digests`).
+- `charsets` and `charset-looks` (M27a): every atlas with a specimen of each font in use; the
+  layers, every look and a mock game screen.
 - M10 lands `screenshots`: the HUD and every card at the three viewports.

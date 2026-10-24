@@ -102,6 +102,11 @@ One direction of dependency, held by `tools/check-agents.sh` once each layer exi
   `engine/core` only and is a pure function of its inputs, so a run replays from its commands.
 - **`engine/ui`**: the immediate-mode 2D layer (rects, images, SDF text), plus Dear
   ImGui behind `GE_DEV_UI`.
+- **`engine/charset`**: the engine's bitmap fonts (`ge::charset`, M27; `docs/charsets.md`):
+  ten monospaced ASCII fonts committed as 256, 512 and 1024 px coverage atlases, the builder
+  that makes them, the noise layers and the text looks with their CPU reference, and text
+  layout. It depends on `engine/core` only, so a game, the console, the menus and a lab all
+  draw text from the same atlases.
 - **`games/fall_line/app`**: Fall Line's presentation, the `fall_line_app` library (which
   the window and the game's GPU labs link): its pass table over `engine/render`, the
   `FrameView` it extracts (from named views now, from `GameState` once the run lands),

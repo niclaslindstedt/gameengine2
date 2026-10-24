@@ -18,6 +18,7 @@
 #   ge_water     bodies of water, the waves a wind grows on them and the one query (engine/water)
 #   ge_move      character movement (engine/move: the knobs, the step, the box world, scenarios)
 #   ge_camera    the camera (engine/camera: poses, followers, rigs, shake, transitions, the stack)
+#   ge_charset   the bitmap fonts (engine/charset: the atlases, the builder, layers, looks)
 #   ge_play      the play contract (engine/play: GameSpec and Run, the session, the input log,
 #                the bench, the stills `ge shot` draws)
 #   ge_replay    replays (engine/replay: the keyframes, the player's seek, the transport;
@@ -39,11 +40,11 @@
 #   ge_isa       the instruction-set baseline (x86-64: AVX2), linked by ge_core and
 #                published as ge::isa
 #   ge_flags     warnings, -Werror, sanitizers: this tree only, never published
-# ge_core, ge_fp, ge_isa, ge_assets, ge_ai, ge_wind, ge_water, ge_move, ge_camera, ge_net, ge_console,
-# ge_lab, ge_play, ge_replay, ge_prof, ge_prof_alloc and every plugin target are installed and
-# published as ge::core, ge::fp, ge::isa, ge::assets, ge::ai, ge::wind, ge::water, ge::move,
-# ge::camera, ge::net, ge::console, ge::lab, ge::play, ge::replay, ge::prof, ge::prof_alloc and
-# ge::<plugin>, and the ge executable is installed to bin/
+# ge_core, ge_fp, ge_isa, ge_assets, ge_ai, ge_wind, ge_water, ge_move, ge_camera, ge_charset, ge_net,
+# ge_console, ge_lab, ge_play, ge_replay, ge_prof, ge_prof_alloc and every plugin target are
+# installed and published as ge::core, ge::fp, ge::isa, ge::assets, ge::ai, ge::wind, ge::water,
+# ge::move, ge::camera, ge::charset, ge::net, ge::console, ge::lab, ge::play, ge::replay, ge::prof,
+# ge::prof_alloc and ge::<plugin>, and the ge executable is installed to bin/
 # (cmake/Packaging.cmake, docs/publishing.md).
 cmake_minimum_required(VERSION 3.25)
 project(gameengine2 LANGUAGES CXX)
@@ -209,6 +210,12 @@ file(GLOB GE_INPUT_SOURCES CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/engine/
 add_library(ge_input STATIC ${GE_INPUT_SOURCES})
 target_link_libraries(ge_input PUBLIC ge_core)
 
+# The engine's bitmap fonts (engine/charset, docs/charsets.md): ten monospaced ASCII charsets,
+# the atlas builder and the effect layers, on the CPU; any renderer uploads the atlases.
+file(GLOB GE_CHARSET_SOURCES CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/engine/charset/*.cpp)
+add_library(ge_charset STATIC ${GE_CHARSET_SOURCES})
+target_link_libraries(ge_charset PUBLIC ge_core)
+
 # Character movement (engine/move, docs/movement.md): the knobs and presets, one step of a moving
 # body over a trace callback, the box world, the strafer and the scenarios. Deterministic, no
 # platform; a game binds the knobs to its console and answers the trace with its own world.
@@ -227,7 +234,7 @@ target_link_libraries(ge_camera PUBLIC ge_core)
 # The lab framework (engine/lab: the contract, the runner, the raster, the PNG), published as
 # ge::lab so a game's labs plug into the same contract as the engine's (docs/labs.md).
 add_library(ge_lab STATIC engine/lab/lab.cpp engine/lab/report.cpp engine/lab/runner.cpp
-  engine/lab/raster.cpp engine/lab/png.cpp engine/lab/diff.cpp engine/lab/inflate.cpp engine/lab/sound.cpp
+  engine/lab/raster.cpp engine/lab/png.cpp engine/lab/diff.cpp engine/lab/inflate.cpp engine/lab/deflate.cpp engine/lab/sound.cpp
   engine/lab/series.cpp engine/lab/stats.cpp engine/lab/plot.cpp engine/lab/chart.cpp
   engine/lab/anim.cpp engine/lab/series_charts.cpp engine/lab/teleport.cpp
   engine/lab/model_view.cpp engine/lab/model_compare.cpp engine/lab/model_sheets.cpp)
@@ -336,7 +343,7 @@ if(PROJECT_IS_TOP_LEVEL)
   get_property(GE_PLUGIN_TARGETS GLOBAL PROPERTY GE_PLUGIN_TARGETS)
   get_property(GE_GAME_TARGETS GLOBAL PROPERTY GE_GAME_TARGETS)
   add_executable(labs engine/lab/main.cpp ${GE_LAB_SOURCES})
-  target_link_libraries(labs PRIVATE ge_lab ge_play ge_replay ge_core ge_audio ge_assets ge_net ge_input ge_wind ge_water ge_move ge_camera ge_ui ${GE_PLUGIN_TARGETS} ${GE_GAME_TARGETS}
+  target_link_libraries(labs PRIVATE ge_lab ge_play ge_replay ge_core ge_audio ge_assets ge_net ge_input ge_wind ge_water ge_move ge_camera ge_charset ge_ui ${GE_PLUGIN_TARGETS} ${GE_GAME_TARGETS}
     ${GE_LAB_EXTRA})
 
   # The `assets` executable (engine/assets/tool.hpp): the built assets listed, checked and stamped,

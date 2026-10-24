@@ -251,6 +251,7 @@ characters.
 | `engine/audio/` | The synth (`ge::audio`): the voice vocabulary, the DSP graph, sounds and racks, the meter, WAV; deterministic, no platform | `audio` |
 | `engine/assets/` | Authored models: the glTF loader and writer, the `Model`, posing and CPU skinning; no GPU | `assets` |
 | `engine/ui/` | The 2D layer (`ge::ui`): paints, the draw list, images, fonts, the CPU raster, backdrops, menus as a model and a view; no GPU | `ui` |
+| `engine/charset/` | The bitmap fonts (`ge::charset`, `docs/charsets.md`): ten ASCII charsets as committed atlases and their builder, the noise layers, the text looks, text layout | `ui` |
 | `plugins/` | Plugins, one directory each, built as `ge_<name>` (`cmake/Plugins.cmake`, checked by `tools/check-plugins.mjs`) | `plugins` |
 | `plugins/racing/` | The racing primitives (`ge::racing`): the control tape, the record book's policy, the standings | `racing` |
 | `plugins/mountain/mapgen/` | The world generator (`ge::mountain::mapgen`): the piste and the ski area by stage, the rule books, the real faces and hints, the digest; `picture/` the map on the CPU | `mountain` |

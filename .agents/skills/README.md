@@ -35,7 +35,7 @@ router's Skills table and the directories against each other.
 | `render` | The pass table, a pass's two halves, the rules that keep a frame fast, captures and prices |
 | `assets` | Authored models: the glTF loader, posing and skinning, the `models` lab, Blender exports |
 | `audio` | The synth's DSP graph, the beds, the audio thread, checking a sound by meter |
-| `ui` | The 2D layer and text, the HUD and cards, the strings table, the dev UI |
+| `ui` | The 2D layer and text, the bitmap fonts (engine/charset), the HUD and cards, the strings table, the dev UI |
 | `labs` | The lab contract: write, run and read a lab; captions, digests, before-and-after |
 | `debug` | Log channels and dumps, series traces, the outlier rule, the chart kit, `ge graph` |
 | `perf` | Budgets, measuring, the proofs a speed-up owes, the levers |

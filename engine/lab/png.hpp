@@ -8,7 +8,8 @@
 // it also reads a PNG another tool compressed.
 //
 // ge:summary The labs' PNG writer and reader: RGBA8, stored deflate, CRC-32 and Adler-32
-// ge:keywords png encode decode read image file crc32 adler32 deflate screenshot
+// ge:keywords png encode decode read image file crc32 adler32 deflate screenshot grey
+// ge:keywords encode_png_grey write_file
 // ge:skill labs
 // ge:test tests/lab_raster_test.cpp
 #pragma once
@@ -29,6 +30,13 @@ std::vector<uint8_t> encode_png(const Picture& picture);
 
 // Write `picture` to `path`; false (and nothing half-written left behind) if it could not.
 bool write_png(const std::string& path, const Picture& picture);
+
+// A COMMITTED picture's PNG: 8-bit grey, each row under the filter that packs it best, deflated
+// (deflate.hpp), the same bytes on every platform. For files the tree keeps (an atlas, a
+// texture layer), where the stored writer above would be megabytes.
+std::vector<uint8_t> encode_png_grey(int width, int height, std::span<const uint8_t> grey);
+// Write `bytes` to `path` as they are; false if it could not.
+bool write_file(const std::string& path, std::span<const uint8_t> bytes);
 
 // The picture a PNG holds, as RGBA8; nothing when the bytes are not a PNG the reader takes
 // (16-bit, palette or interlaced images) or a checksum fails.
