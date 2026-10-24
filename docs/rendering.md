@@ -851,6 +851,34 @@ pass 7 ms (the `profile` lab); the bloom's cost on a real GPU waits for the Mac'
 
 Linear light is used throughout, and the conversion happens here, once.
 
+## The 2D pass
+
+Menus, the HUD and the console are drawn by the 2D layer (`engine/ui`, `docs/architecture.md`):
+an immediate-mode draw list of rounded boxes and text runs, which a CPU raster pictures headless.
+The GPU draws the same list in one pass after post, blended over the display image.
+
+**As built (M22b)** (`render/ui_pass.hpp`, `ui_pass.wgsl`):
+
+- **One instanced draw.** Each box is one quad, and its rounded rectangle's signed distance,
+  paint (solid, or a linear or radial gradient of up to eight stops), image and border are
+  worked out in the fragment shader. Each glyph is one quad that reads a glyph atlas. Every
+  instance is in one storage buffer and every paint in another. The draw splits only where a
+  box's image changes, because each image has its own small bind group. A menu page is one draw.
+- **The glyph atlas** is a 1024² `R8Unorm` texture packed in shelves. A glyph's mask is copied
+  in the first time a list draws it, and kept under the font's cached mask. A full atlas is
+  emptied and refilled from the list being prepared.
+- **Images** are uploaded the first time a box names them. A texture the GPU already has, such
+  as the live frame under a menu, is bound to a key with `ui_texture`.
+- **The CPU raster's pixels.** The pass uses the same signed distance and coverage at the
+  pixel's centre, the same clip rule, and text set by the same `ui::place_glyphs` from the same
+  masks. It samples images bilinearly at the same texel centres. It blends straight
+  sRGB-encoded colours, folding a fill and its border into one premultiplied colour, so the
+  output must be a UNORM target: an `*Srgb` one would blend in linear light. Gradients get half
+  a level of dither against banding.
+- **Measured.** The `menu-gpu` lab holds every page of the `menu` lab to the raster: on lavapipe,
+  none is more than 3 levels off at any pixel. Preparing a 1280 × 720 page costs about 1.7 ms of
+  CPU, and the software adapter draws it in 19 ms. The real GPU's cost waits for the Mac.
+
 ## Particles and figures
 
 - **Particles are simulated in compute** in fixed pools: emission appends to a ring, the
@@ -1096,7 +1124,7 @@ contract (scenes, captions, sheets). The renderer's half is:
 | Home | Holds |
 | --- | --- |
 | `engine/gpu/` | The `webgpu.h` wrapper: the device and its feature tiers, RAII handles, the pipeline manifest and creation counter, timestamp queries, staging uploads, readback. The only directory that includes `webgpu.h` |
-| `engine/render/` | Mechanisms any game could use: the pass table and named targets, the frame's stats, GPU-driven instance families and their culling, the depth pyramid, the heightfield clipmap renderer, the horizon map, cascaded shadows and the shadow atlas, the sky tables and aerial perspective, the cloud volume, TAA-U, post, compute particles, skinning, and the shared WGSL library |
+| `engine/render/` | Mechanisms any game could use: the pass table and named targets, the frame's stats, GPU-driven instance families and their culling, the depth pyramid, the heightfield clipmap renderer, the horizon map, cascaded shadows and the shadow atlas, the sky tables and aerial perspective, the cloud volume, TAA-U, post, the 2D pass, compute particles, skinning, and the shared WGSL library |
 | `plugins/<name>/app/` | A plugin's presentation half, shared by every game that links the plugin: `mountain/app` holds the snow material, the trail maps and their stamping, and the procedural tree shapes; `skier/app` holds the figure, the tracks' prints and the spray emitters (`docs/architecture.md` § Plugins) |
 | `games/fall_line/app/` | The game's own: its pass table, its quality ladder's values, its grade, and whatever draws only this game has |
 
