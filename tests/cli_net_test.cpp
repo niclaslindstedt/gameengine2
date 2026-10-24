@@ -1,10 +1,11 @@
 // `ge net` (engine/cli/net.hpp): ge net sim runs the same session the traffic generator does (its
 // digest), writes the host's capture, and ge net inspect and ge net stats read that capture back:
 // every datagram a line, every client a connection, the series and its charts written; usage
-// errors for an unknown preset, mix, link key or packet type and a missing file.
+// errors for an unknown preset, mix, link key or packet type and a missing file; ge net stress
+// names each knob's breaking point and runs the chaos scripts and the fuzzer it is asked for.
 //
 // ge:summary Test: ge net sim, inspect and stats on a capture; their usage errors
-// ge:keywords test cli net sim inspect stats pcap capture digest
+// ge:keywords test cli net sim inspect stats pcap capture digest stress chaos fuzz
 // ge:skill testing agent-interface net
 #include <chrono>
 #include <filesystem>
@@ -130,6 +131,30 @@ TEST(net_usage_errors_say_what_to_pass) {
   NetStatsOptions st;
   st.file = in.file;
   CHECK(exit_of(run_net_stats(st)) == 1);
+}
+
+TEST(net_stress_names_each_knob_s_breaking_point_and_runs_the_scripts) {
+  NetStressOptions n;
+  n.knobs = {"loss", "latency"};
+  n.clients = 3;
+  n.seconds = 3;
+  n.steps = 4;
+  n.refine = 2;
+  n.chaos = {"partition", "host-lost"};
+  n.fuzz = 5000;
+  const Outcome o = run_net_stress(n);
+  CHECK_MSG(exit_of(o) == 0, say(o));
+  CHECK(o.text.find("loss") != std::string::npos && o.text.find("latency") != std::string::npos);
+  CHECK(o.result.find("\"knob\":\"loss\",\"found\":true") != std::string::npos);
+  CHECK(o.result.find("\"script\":\"host-lost\",\"ok\":true") != std::string::npos);
+  CHECK(o.result.find("\"honest\":true") != std::string::npos);
+  CHECK(o.summary == "2 knobs ramped, 2 chaos scripts");
+
+  n.knobs = {"colour"};
+  CHECK(exit_of(run_net_stress(n)) == 2);
+  n.knobs = {};
+  n.chaos = {"earthquake"};
+  CHECK(exit_of(run_net_stress(n)) == 2);
 }
 
 TEST(net_watch_reads_a_live_tap_and_measures_what_it_saw) {

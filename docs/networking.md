@@ -231,8 +231,10 @@ that names its entities' fields and its step.
 | Interest | A client is sent its own entity and those within `interest_radius` on two named fields, and as `visible` allows; a row out of sight is sent gone | The persistent world's and the open world's "what is near you", and nothing hidden is sent (M17l) |
 | The budget | `snapshot_budget` caps a snapshot's bytes; rows are written stalest first, a row's priority being how many ticks the client's copy (the baseline's) is behind; a row left out keeps the baseline's value | Deltas against acks that lag form chains of baselines: a priority reset when a row is sent would starve it in the other chain for ever, so the age is read off the baseline itself |
 | Inputs | Each tick's input goes up with the last `redundancy` (4) beside it; the server queues them by number and applies one a tick | One lost packet costs nothing. A tick with none waiting steps the last again and the queue grows by one, a buffer the link's jitter set; inputs lost past the redundancy are taken to be the one before them, less those the repeats stood in for, so the entity is stepped as often as the client stepped it |
-| Prediction | The client steps its own entity at once, and on each snapshot replays every input the server had not applied over the server's state; a difference is kept as an error that decays by `smoothing` a tick | Corrections are shown as a glide, not a snap |
-| Interpolation | Others are drawn `interp_ticks` (6) behind the newest snapshot heard of, between the two around that moment | Two snapshots are nearly always there to draw between, at 30 a second over a lossy link |
+| Prediction | The client steps its own entity at once, and on each snapshot replays every input the server had not applied over the server's state; a difference is kept as an error drawn out through a critically damped spring (half-life `spring_halflife_s`, 1/15 s) that carries its own velocity, or shown at once past `snap_distance` (a teleport, a respawn); `spring` off, the error decays by `smoothing` a tick | A decay jumps the drawn velocity at every correction, a kink the eye catches; the spring starts from the velocity the path already had, so it bends instead |
+| Time sync (M17n) | Each snapshot carries the client's SLACK: the fewest of its inputs left waiting on the server over the last half second (-1: a tick went without). The client runs its tick `replicate_client_dilation` times as fast (within 3%) to hold the slack at zero, one in reserve for a few seconds after a window ran short | A clock a little fast piles inputs up on the server (a third of a second of lag within a minute at 2%); a little slow starves it (a repeated step, a correction). Held at zero, an input arrives just in time whatever the drift |
+| Interpolation | With time sync, others are drawn behind the client's reckoning of the server's tick by what the last 64 snapshots' arrivals needed (how far the reckoning had run past the newest snapshot when the next came), eased up quickly and down slowly; with sync off, `interp_ticks` (6) behind the newest heard of. Between snapshots, a cubic Hermite curve whose slopes come from the snapshots either side (`cubic`); past the newest, carried on at the last velocity for up to `extrapolate_s` (0.2 s, then held; a field with `extrapolate` false is held at once) and blended back over `extrapolate_blend_s` once the late one arrives | On a clean link the others are drawn 38 ms behind instead of 100; on a jittery one the delay grows until they rarely stand still. Straight lines turn a corner at every snapshot, and a held entity stops and starts |
+| The tick rate | `tick_hz` is the game's (`sv_fps`): every duration above is set in seconds and turned into ticks at it | A shooter at 72 Hz and a racer at 120 behave alike with the same settings; the `net-predict` lab runs both |
 | Lag compensation | Each input names the tick the client was drawing; `replicate_rewind` returns any entity at that tick (fractional) from the server's quantized history | A hit is judged against what the player saw |
 
 Nothing reads a clock or draws randomness: the exchange over the simulated network replays to
@@ -243,10 +245,69 @@ corrected; over the `bad` preset (90 ms, 5% loss in bursts) a prediction is corr
 a second, by a few metres at worst after a long burst; the server's rewinds land on what the
 client drew (a median gap of zero).
 
+## Prediction, state of the art (M17n–M17q)
+
+M17f predicts the client's own entity, replays the inputs the server has not applied over each
+snapshot, decays a correction's error, interpolates the others a fixed six ticks back and rewinds
+for hits. Four rows take it the rest of the way, each measured by the `net-predict` lab under every
+preset (the prediction's error against the server, how often and how far it corrects, the drawn
+path's jerk, the view delay):
+
+| Row | What | Why |
+| --- | --- | --- |
+| M17n (built) | Time sync: the client's tick locked to the server's; the client ahead by just enough that its input lands a target buffer early; the server reports each client's input queue and the client dilates its tick a few percent to hold it; the interpolation delay set by the jitter measured | A fixed lead stalls on a bad link and wastes delay on a good one; dilation keeps the queue at its target with no stall, no repeat and no drop, and the view as fresh as the jitter allows |
+| M17o (built) | Corrections drawn through a critically damped spring, velocity continuous, snapping only past a distance; others on cubic curves through their velocities; a capped extrapolation by the game's own step when snapshots are late | A decay alone leaves a kink in the velocity the eye catches; a late snapshot should not freeze the others |
+| M17p (built) | The predicted world: what the client's input touches resimulated with it, others' inputs taken as their last; events predicted under a client's id, matched or undone; a resimulation budget | A player who bumps another or fires sees it at once, not a round trip later |
+| M17q | Sub-tick inputs applied at their fraction of a tick; the rewind capped (the shooter favoured up to a limit) and the hit confirmed; a finish line's order at sub-tick resolution | A tick is 16 ms: a press, a shot or a finish should not be rounded to it |
+
+M17n is built; the `net-predict` lab measures it. With 16 clients whose clocks run 2% fast or
+slow, an input's p95 from the hand to the server's step falls from 367 ms to 50 on `lan` and from
+467 to 250 on `bad`, and the corrections a minute fall by up to seven times. With true clocks the
+view delay falls from 100 ms to 38 on `lan`, 106 to 61 on `broadband` and 120 to 88 on `wifi`,
+drawing past the newest snapshot under 1% of the time. On `awful` it grows from 317 ms to 444 and
+stands still 3% of the time instead of 8%: there the delay buys smoothness, and M17o's
+extrapolation will take some of it back.
+
+M17o is built on top, measured by the same lab at 72 Hz and 120 Hz in three modes (fixed, time
+sync, smooth). Against time sync alone, at 72 Hz the others' drawn jerk at the 99th percentile
+falls from 12,900 m/s³ to 4,600 on `broadband`, 25,300 to 7,600 on `wifi` and 83,400 to 59,700 on
+`awful`. The own entity's jerk, less the ticks where its own input changed, falls from 26,200 to
+6,100 on `bad` and from 37,900 to 7,600 on `awful` (at 120 Hz, 43,900 to 3,900 and 85,600 to
+9,200). Drawn past the newest snapshot, the others land a mean 0.28 m from the server's truth when
+held and 0.01 m when carried on (`bad`, 72 Hz). At 72 Hz on `lan` an input reaches the server's
+step in 14 ms and the others are drawn 31 ms behind; at 120 Hz, 8 ms and 19.
+
+M17p is built on top: the other players within `predict_radius` of the own entity (at most
+`max_predicted`, kept out to 1.5 radii) are stepped beside it by their last inputs, which the
+server sends in a trailer on the snapshot (kind 3: each nearby player's id and newest input), and
+a game's `Schema::interact` resolves each contact on both ends with the same step. A contact
+beginning is an event (`kContactEvent`, the other's id): the client predicts it under the input
+that caused it, the server sends its own over the reliable `event_channel`, and each one ends
+`confirmed` (matched within `event_slop_s`), `undone` (never came within `event_wait_s`),
+`unpredicted` (the server's, about an entity the client was predicting) or `heard` (about one it
+was not). A replay costs an entity-step per input per predicted entity; past `resim_budget` the
+farthest leave it. Past `predict_max_s` (0.1 s) of replay a stale input guesses worse than the
+curve draws, so the others fade back to the curve through the spring and come back at three
+quarters of it. The lab's joust (16 clients in pairs, each charging its partner for a second and
+backing off the next, at 72 Hz) measures it: corrections a minute fall from 7.9 to 0 on `lan`
+(every contact confirmed), 13.1 to 5.8 on `broadband` (96%) and 92 to 14 on `wifi`; on `mobile`,
+`bad` and `awful` the replay is past the horizon and the partner is drawn as interpolated (their
+rows differ from the interpolated ones only by the network's draws, which the trailer's bytes
+move: other seeds swap which is lower).
+
+Which of them a kind of game uses: a shooter all four; a racer its own vehicle predicted (M17n,
+M17o), rivals extrapolated a little so they are drawn where they are, contacts on the server
+(M17p); a fighting game rollback (M17g) with M17n's sync; a strategy game lockstep; a persistent
+world M17n and M17o for its own movement only. Character movement (M28d) reconciles an
+`engine/move` body on top of them.
+
 ## Rates and live tools (M17f2)
 
 A client asks for its own rates and the server caps them, as the settings a player tunes in a cfg
-(the console's names in brackets):
+(the console's names in brackets). `add_net_cvars` (`engine/net/net_cvars.hpp`) binds every one of
+them to the `ReplicateConfig` a game makes, the game's own values as the defaults, so a shooter
+can start at 72 Hz and a racer at 120; `net_cvars_apply` turns `cl_interp`'s seconds into ticks at
+`sv_fps`:
 
 | Setting | Side | What it does |
 | --- | --- | --- |
@@ -254,9 +315,13 @@ A client asks for its own rates and the server caps them, as the settings a play
 | `update_rate` (`cl_updaterate`) | client | snapshots a second it asks for; sent every max(`send_every`, tick_hz / update_rate) ticks |
 | `cmd_rate` (`cl_cmdrate`) | client | input messages a second; each carries every input since the last and `redundancy` before them |
 | `redundancy` (`cl_cmdbackup`) | client | inputs repeated in every message |
-| `interp_ticks` (`cl_interp`) | client | how far behind the newest snapshot others are drawn |
-| `max_rate`, `max_update_rate` (`sv_maxrate`) | server | the most any client is sent, whatever it asks |
-| `tick_hz` (`sv_fps`) | both | the step's rate, which turns the rates into ticks |
+| `interp_ticks` (`cl_interp`, s) | client | how far behind the newest snapshot others are drawn without time sync |
+| `sync` (`cl_timesync`) | client | time sync (M17n) on or off |
+| `spring`, `cubic` (`cl_smooth`) | client | smoothing (M17o) on or off |
+| `extrapolate_s` (`cl_extrapolate`) | client | the most the others are carried past the newest snapshot |
+| `predict_radius` (`cl_predictworld`, m), `predict_max_s` (`cl_predictmax`, s) | client | the predicted world (M17p): the other players this near predicted beside the own entity, while the replay is no longer than the horizon |
+| `max_rate` (`sv_maxrate`), `max_update_rate` (`sv_maxupdaterate`) | server | the most any client is sent, whatever it asks |
+| `tick_hz` (`sv_fps`, latched) | both | the step's rate, 10 to 240 Hz, which turns the rates and durations into ticks; a change waits for a new map or a restart |
 
 The client's ask rides on every input message (`rate` u32 and `update_rate` u16), so a change
 takes effect on the next one. Finding the right numbers is an experiment, and three tools run it:
@@ -279,6 +344,33 @@ takes effect on the next one. Finding the right numbers is an experiment, and th
   connection's packets, kbps, round trip and loss every second, then saves what it saw and
   measures it as `ge net stats` does. Nothing in the game stops or changes: the tap costs a
   loopback send a datagram.
+
+## Lockstep and rollback (M17g)
+
+The model where only inputs cross the wire, for a strategy game (thousands of units, a few bytes
+of orders a second) and, with rollback, a fighting game or a two-player racer: `lockstep.hpp`
+over a node in a mesh (every seat connected to every other), one unreliable channel, and a game
+that gives its step, its digest and, for rollback, a save and a load of its state.
+
+| Piece | What it does | Why |
+| --- | --- | --- |
+| Seats and turns | Each player is a seat; a seat's input for a turn is whatever bytes the game gives it (orders appended with `lockstep_input`, or a pad's state set with `lockstep_set_input`), up to 128 | The engine names no unit or order: a turn's input is opaque bytes every peer hands the same step |
+| Input delay | The pending input is closed as the seat's input for turn T + `delay` when the peer starts turn T; the turns below the delay are empty for every seat | An order has `delay` turns to reach every peer before it is due, so on a good link nobody waits; a session starts without waiting |
+| Lockstep | A turn is `turn_steps` steps; a peer starts a turn only with every seat's input for it, or STALLS (`lockstep_waiting` names the seats) | Nothing is predicted and nothing undone: the strategy game's model, whatever its world's size |
+| Rollback | A step a turn; a missing input is predicted as the seat's newest; when the real one arrives and differs, the state is loaded from before that step and every step since run again; a peer more than `max_rollback` steps past the last step every input is in for stalls | The local player's input is felt after the delay alone (a step on every preset but the worst); the game keeps `max_rollback` + 1 states |
+| The message | Every send carries each of this seat's inputs some seat has not acked, how many turns of every seat's inputs this peer holds (the acks), and this seat's final step digests not yet acked; one message to every peer each `send_every` updates | One lost packet costs nothing; acks trim what is resent |
+| Digests | After every step whose inputs are all real, the game's digest is kept and sent; every peer compares each seat's with its own, step by step | A desync is named by the step it happened on (`lockstep_desync`), a round trip after it was stepped: the cheat check M17l builds on |
+
+Nothing reads a clock or draws randomness: the `net-lockstep` lab's hash says so. In that lab
+four strategy seats in turns of 6 steps (100 ms) with 2 turns of delay never wait on `lan`
+through `mobile` (an order is felt 233 ms after it is given at the median: the delay plus the
+rest of the turn it was given in), wait 2% of the time on `bad` and 36% on `awful`; two fighting
+seats with a step of delay feel their own pad a step later on every preset but `awful`, rolling
+back about 13 times a second, by 1 step on `broadband`, 3 on `mobile` and 6 on `bad`. A desync
+planted on one step of one seat is named on that very step on every preset, seen 17 ms after it
+was stepped on a LAN and 233 ms on `awful`. Sending a message every update costs about 90
+kbit/s a peer on a LAN, mostly headers; every third update cuts the inputs' bytes by a third and raises
+`bad`'s waits from 2% to 7% (`--send-every`).
 
 ## The simulated network (M17a)
 
@@ -349,21 +441,43 @@ are an arms race the engine does not enter, and the checks above hold without th
 ## Pressure tests (M17m)
 
 The simulated network runs on virtual time, so an hour of play takes seconds and every run is
-seeded and replayable. `engine/net/stress` and `ge net stress` push it until something breaks:
+seeded and replayable. `engine/net/stress.hpp` and `ge net stress` push the fake-traffic session
+(`traffic.hpp`) until something breaks:
 
-- **Load.** 32 peers in a session, many sessions in one host process, each on a traffic mix.
-- **Soak.** Hours of virtual play, held to memory and queues staying flat, sequence numbers
-  wrapping cleanly and every reliable message delivered.
-- **Chaos.** A script changes the links over time: a link that flaps, a partition and its
-  healing, the host lost mid-session, a NAT that rebinds a client's port, clock skew, a burst of
-  loss, the bandwidth collapsing. Each ends with every peer reconnected or cleanly timed out.
-- **Ramps.** One knob (latency, loss, peers, message rate, bandwidth) is raised step by step
-  until a bound breaks (delivery late, a queue growing, a peer timing out), and the report
-  names the value where it broke for each traffic mix.
-- **Fuzzing.** The packet parser is fed random and mutated datagrams under the sanitizers;
-  every one is refused or read, never a crash or an overread.
-- **Bots at scale.** A game's bots play as clients across many simulated servers, so the
-  game's own traffic is the load, not only fake traffic.
+- **Ramps.** One knob of the links (loss, the burst a loss comes in, latency, jitter, or the
+  bandwidth taken down) is raised step by step until the session breaks a bound, then bisected
+  between the last step that held and the first that broke. The bounds (`StressBounds`): every
+  client connected and none dropped, the inputs' one-way p95 within 250 ms, at least 85% of the
+  snapshots delivered, every reliable message delivered in order by the end of the drain, the
+  reliable messages' p95 within 1500 ms. The racing mix of eight clients from broadband breaks
+  at 14% loss (snapshots), bursts of 56 drops at 5% loss (a reliable message, as a burst nears
+  the five-second timeout), 250 ms of latency or jitter (inputs late), and 54 kbit/s a link
+  (snapshots).
+- **Chaos.** A script (`ChaosStep`s on the traffic plan) changes the session as it runs: a link's
+  conditions changed and restored, the host's process lost and started again, a client's port
+  rebound as a NAT does, a client's clock run fast or slow. Clients that lose their connection
+  wait a second and try again, three times. Eight scripts (flap, partition, host-lost,
+  host-restart, rebind, skew, burst, collapse) each name how they must end: every client
+  connected (a flap, a burst and skewed clocks without even a drop) or, the host gone for good,
+  every client timed out; never stuck connecting, and never a host slot kept for a client that
+  is gone. A rebound port costs a reconnect today: a node knows its peers by address, so the
+  host hears the client's new port as a stranger until the old connection times out.
+- **Soak.** A session runs for hours of virtual time with the latencies summed instead of kept,
+  and what the simulated network and every node hold (their buffers' capacities, `sim_held_bytes`
+  and `node_held_bytes`) is sampled: the second half's peak must be the first's. An hour of 32
+  clients runs in twelve seconds; the host's packet sequence wraps twice and the reliable
+  message ids (events at 40 Hz) twice, every reliable message whole.
+- **Fuzzing.** Beside an honest session, datagrams made or mutated each tick go on the wire
+  (copies of packets in flight with bits flipped, cut short, run long or spliced; the game's own
+  header over garbage; a flood of requests and responses with made-up cookies; payloads with
+  guessed keys and messages of any shape), and every one is also run through the parser on its
+  own. From strangers' addresses the honest session never notices: a million datagrams in
+  2.5 s, the made-up cookies refused, no slot given away. Spoofed from a peer's own address, a
+  mutated copy of its real packet carries its real key, and some break the connection: payloads
+  are not yet authenticated (M17i adds it), and the `net-fuzz` lab's spoofed row counts it.
+
+Not yet built (the rest of M17m): load as many sessions in one host process, timed; and a
+game's bots playing as clients across many simulated servers, so its own traffic is the load.
 
 ## The tools
 
@@ -380,15 +494,17 @@ seeded and replayable. `engine/net/stress` and `ge net stress` push it until som
 | the `net-session` lab | M17d | A 32-player lobby on a dedicated host under each preset: everyone joins and picks a team, chats to all, to the team and to one player, one floods; the leader kicks one (whose return is refused), another is cut for six seconds and comes back to its seat, then the settings, the start and the return. The table checks every chat copy delivered, every player list the host's, the kick, the ban and the seat kept; the seats are charted and the pings drawn as boxes |
 | the `net-reach` lab | M17e1, M17e2 | Every pair of NAT kinds (none, full cone, restricted, port-restricted, symmetric) under each preset: the path each pair took (direct or relayed, against the one RFC 4787 predicts), how long it took, a reliable message each way; STUN from behind each kind; the connect times as a heatmap; a router speaking each of PCP, NAT-PMP and UPnP opening, renewing and closing a port that lets a client straight in |
 | the `net-replicate` lab | M17f | 32 clients each steering a mover and a crowd the game moves, under each preset: the bytes each client is sent a second, how often and how far a prediction is corrected, the snapshots lost or left without a baseline, the rows a budget starved, the inputs repeated, and how far the server's rewind lands from what each client drew; the bandwidth charted over the run, the rewind gaps as boxes |
+| the `net-lockstep` lab | M17g | Four strategy seats in lockstep turns and two fighting seats with rollback, under each preset: how often a peer waits, an order's and a pad's time to be felt, the bytes a peer sends, rollbacks a second and their depth, agreement; a desync planted on one step named on that step; progress charted, latencies and depths boxed |
 | `ge net sweep` | M17f2 | A replicated world run once a value of one knob (a rate, the interpolation, the input backup, the tick, a link condition, a drop pattern): bytes each way, view delay, corrections, dropped snapshots, starved rows, rewind gaps, and the cheapest value within reach of the best |
 | the live tap and `ge net watch` | M17f2 | A RUNNING game's or server's datagrams mirrored to a loopback port: each connection every second, then saved as a capture and measured as `ge net stats` does |
 | fake conditions (`transport_fake`) | M17f2 | A live game's sends delayed, jittered and dropped (or dropped in a pattern) as a bad link would, for playing an experiment by hand |
+| the `net-predict` lab | M17n–M17q | Clients predicting over each preset: the prediction's error against the server, corrections a minute and their size, the drawn path's jerk, the view delay, the server's input queue against its target, charted over the run |
 | the `voice` lab | M17h | A voice through each preset, metered against the clean one, the WAV attached |
 | the `accounts` lab | M17j | Sign-ups, logins (a wrong password refused, a brute force throttled), friend requests, presence and an invite, against the service on the simulated network |
 | the `cheats` lab | M17l | Each scripted cheat (speed hack, teleport, input flood, off-grid or future inputs, forged and replayed packets, fishing for hidden state, a planted desync, a forged score or ghost) caught or refused; honest bots under every preset raising no flag |
-| `ge net stress` and the `net-stress` lab | M17m | Load and soak runs, ramps that name each knob's breaking point for a traffic mix, the session's memory and queues over time, charted |
-| the `net-chaos` lab | M17m | Each chaos script over a session: who disconnected, who came back, what was lost and how late |
-| the `net-fuzz` lab | M17m | The parser against random and mutated datagrams: how many read, how many refused, none crashed |
+| `ge net stress` and the `net-stress` lab | M17m | Each link knob ramped to its breaking point for a traffic mix, the bound it broke and the latencies charted against the knob; a soak's memory charted over an hour of virtual time; `ge net stress --chaos=all --soak=3600 --fuzz=1000000` runs every pressure test at once |
+| the `net-chaos` lab | M17m | Each chaos script over a session: how every client ended (connected, timed out, stuck), the drops, the reconnects and how long they took, the host's left-over slots; the clients connected charted through each script |
+| the `net-fuzz` lab | M17m | A million fuzzed datagrams beside an honest session, from strangers and then spoofed from the peers: how many parsed, what the host refused and why, whether the session noticed; its round trip charted with the fuzz and without |
 | the `net-play` lab | M17k | The game's bots as remote players under each preset: the corrections, the divergence, the bandwidth |
 
 ## Fall Line

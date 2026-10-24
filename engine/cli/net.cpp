@@ -83,7 +83,8 @@ const char* kCaptureNext =
     "pass a .pcap the engine wrote: a lab's attachment (previews/<lab>/*.pcap), "
     "`ge net sim --capture=FILE`, or a live node's save_capture (skill: multiplayer)";
 
-// "latency=40,jitter=10,loss=2%" onto `c`; the error, or "".
+}  // namespace
+
 std::string apply_link(const std::string& spec, net::LinkConditions& c) {
   size_t start = 0;
   while (start < spec.size()) {
@@ -134,6 +135,8 @@ std::string apply_link(const std::string& spec, net::LinkConditions& c) {
   }
   return "";
 }
+
+namespace {
 
 std::vector<std::string> split_commas(const std::string& text) {
   std::vector<std::string> out;
@@ -784,6 +787,28 @@ Outcome run_net(const Args& a) {
     n.frames = static_cast<long long>(x);
     n.save = flag_value(a, "save", "runs/net-watch.pcap");
     return run_net_watch(n);
+  }
+  if (name == "net stress") {
+    NetStressOptions n;
+    n.knobs = split_commas(flag_value(a, "knobs"));
+    n.preset = flag_value(a, "preset", "broadband");
+    n.mix = flag_value(a, "mix", "racing");
+    n.link = flag_value(a, "link");
+    n.chaos = split_commas(flag_value(a, "chaos"));
+    if (!number("clients", 8, x)) return bad("clients");
+    n.clients = static_cast<int>(x);
+    if (!number("seconds", 6, n.seconds)) return bad("seconds");
+    if (!number("steps", 8, x)) return bad("steps");
+    n.steps = static_cast<int>(x);
+    if (!number("refine", 4, x)) return bad("refine");
+    n.refine = static_cast<int>(x);
+    if (!number("soak", 0, n.soak) || n.soak < 0) return bad("soak");
+    if (!number("soak-clients", 32, x)) return bad("soak-clients");
+    n.soak_clients = static_cast<int>(x);
+    if (!number("fuzz", 0, n.fuzz) || n.fuzz < 0) return bad("fuzz");
+    if (!number("seed", 1, x) || x < 0) return bad("seed");
+    n.seed = static_cast<unsigned>(x);
+    return run_net_stress(n);
   }
   if (name == "net sweep") {
     NetSweepOptions n;

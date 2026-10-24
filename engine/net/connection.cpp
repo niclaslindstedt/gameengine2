@@ -102,8 +102,12 @@ bool place_sequence(Connection& c, uint16_t seq) {
   }
   const int d = seq_diff(seq, c.recv_newest);
   if (d > 0) {
-    const uint64_t shifted = (static_cast<uint64_t>(c.recv_bits) << d) | (1ull << (d - 1));
-    c.recv_bits = d > 32 ? 0 : static_cast<uint32_t>(shifted);
+    // A jump past the 32 bits (a long outage, or a forged sequence) forgets them all; shifting
+    // by 64 or more would be undefined.
+    c.recv_bits =
+        d > 32
+            ? 0
+            : static_cast<uint32_t>((static_cast<uint64_t>(c.recv_bits) << d) | (1ull << (d - 1)));
     c.recv_newest = seq;
     return true;
   }

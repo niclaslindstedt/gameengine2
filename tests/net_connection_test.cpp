@@ -142,6 +142,30 @@ TEST(connection_sequenced_never_goes_back) {
   CHECK(b.stats.duplicates == 1 && g.msgs.size() == 1);
 }
 
+TEST(connection_a_sequence_far_ahead_forgets_the_ack_bits) {
+  // A jump of hundreds of packets (a long outage, or a forged sequence the fuzzer sends) must
+  // clear the ack bits, never shift them by 64 or more.
+  Connection a, b;
+  connection_init(a, three(), 5, 0);
+  connection_init(b, three(), 5, 0);
+  uint8_t buf[kMaxPacket];
+  for (int64_t i = 0; i < 300; i++) {
+    const size_t n = connection_write(a, 1, buf, i * 1000, true);
+    connection_end_flush(a);
+    if (i != 0 && i != 299) continue;  // only the first and the 300th arrive
+    Reader r = make_reader(buf, n);
+    uint32_t p;
+    PacketType t;
+    PayloadHeader h;
+    read_packet_start(r, p, t);
+    read_payload_header(r, h);
+    Got g;
+    CHECK(connection_read(b, h, r, i * 1000, {sink_fn, &g}));
+  }
+  CHECK(b.recv_newest == 300);
+  CHECK(b.recv_bits == 0);
+}
+
 TEST(connection_drops_unreliable_with_no_room_and_refuses_past_the_window) {
   Connection a;
   connection_init(a, three(), 5, 0);

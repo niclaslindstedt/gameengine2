@@ -1,6 +1,6 @@
 ---
 name: net
-description: "Use for engine/net in gameengine2: multiplayer networking. Addresses, the wire, UDP and TCP sockets, the simulated network (stream links too) and its conditions, pcap captures, the packet format, connections (acks, round trip, loss, unreliable/sequenced/reliable channels, big messages in pieces, priorities, the send budget), nodes (host, client, peer; up to 32), sessions (the lobby: seats, teams, chat, kick, start, reconnect by token), LAN discovery, NATs (the simulated kinds, STUN, the rendezvous, hole punching, the relay), opening a port on the router (PCP, NAT-PMP, UPnP IGD, the simulated router), replication (quantized snapshots and deltas, interest, the byte budget, prediction and reconciliation, interpolation, lag compensation by rewind), fake-traffic sessions, the net-link, net-session, net-reach and net-replicate labs; and the M17 plan (lobby, chat, NAT, replication, lockstep, voice, accounts)."
+description: "Use for engine/net in gameengine2: multiplayer networking. Addresses, the wire, UDP and TCP sockets, the simulated network (stream links too) and its conditions, pcap captures, the packet format, connections (acks, round trip, loss, unreliable/sequenced/reliable channels, big messages in pieces, priorities, the send budget), nodes (host, client, peer; up to 32), sessions (the lobby: seats, teams, chat, kick, start, reconnect by token), LAN discovery, NATs (the simulated kinds, STUN, the rendezvous, hole punching, the relay), opening a port on the router (PCP, NAT-PMP, UPnP IGD, the simulated router), replication (quantized snapshots and deltas, interest, the byte budget, prediction and reconciliation, interpolation, lag compensation by rewind), lockstep and rollback (turns, input delay, prediction and resimulation, step digests that name a desync), fake-traffic sessions, pressure tests (ramps to a breaking point, chaos scripts and reconnects, soaks and memory, the fuzzer), the net-link, net-session, net-reach, net-replicate, net-lockstep, net-stress, net-chaos and net-fuzz labs; and the M17 plan (lobby, chat, NAT, replication, lockstep, voice, accounts)."
 ---
 
 # Networking
@@ -33,10 +33,14 @@ skier. A game's half (what it replicates, its message ids, its lobby's settings)
 | `net/reach.hpp` | The two ends on the node's socket: the host registers and punches, the client joins, connects, follows a punch's port (`node_retarget`), falls back on the relay; `reach_wire.hpp` the messages (not installed) |
 | `net/portmap.hpp` | Opening a port on the router: PCP, then NAT-PMP, then UPnP IGD on a socket of its own; the lease renewed at half its life, closed with a lease of 0; `portmap_wire.hpp` the three protocols' messages (not installed) |
 | `net/sim_router.hpp` | The simulated router: PCP, NAT-PMP, SSDP and UPnP's SOAP answered on a NAT's LAN face (`NatConfig::gateway`), each grant a forward on the NAT |
-| `net/replicate.hpp` | Replication, the server's word: the schema's quantized fields, per-client deltas against the acked snapshot, interest, the budget, redundant inputs, prediction and smoothing, interpolation, `replicate_rewind`; `replicate_server.cpp` and `replicate_client.cpp` its halves, `replicate_wire.hpp` the messages and the bit packing (not installed) |
+| `net/net_cvars.hpp` | The network's cvars (`sv_fps`, the rates, `cl_timesync`, `cl_smooth`, `cl_interp`, `cl_extrapolate`) bound to a `ReplicateConfig`, the game's values as the defaults |
+| `net/replicate.hpp` | Replication, the server's word: the schema's quantized fields, per-client deltas against the acked snapshot, interest, the budget, redundant inputs, time sync (the server's slack in each snapshot, the client's clock dilation, the interpolation delay from the arrivals' need), prediction and smoothing (the spring, the snap distance), the predicted world (others by their last inputs from the snapshot's trailer, `Schema::interact`, contact events and their outcomes, the replay budget, the horizon), interpolation on cubic curves, capped extrapolation and the blend back, `replicate_rewind`; `replicate_server.cpp` and `replicate_client.cpp` its halves, `replicate_wire.hpp` the messages and the bit packing (not installed) |
 | `net/replicate_trial.hpp` | One measured replicated world (clients, a crowd, rewinds) over a link: what the `net-replicate` lab and `ge net sweep` run |
+| `net/lockstep.hpp` | The same step everywhere: seats in a mesh, inputs in turns with a delay, lockstep's waits or rollback's prediction and resimulation, the inputs message with its acks, step digests compared to name a desync |
+| `net/lockstep_trial.hpp` | One measured lockstep session (a strategy game in turns, a fighting game with rollback, a desync planted) over a link: what the `net-lockstep` lab runs |
 | `net/tap.hpp` | The live tap: a running node's datagrams mirrored as pcap records to a loopback port for `ge net watch` |
-| `net/traffic.hpp` | Fake traffic: a whole session over the simulated network, measured end to end |
+| `net/traffic.hpp` | Fake traffic: a whole session over the simulated network, measured end to end; chaos steps, reconnect tries, a per-tick hook; `sim_held_bytes` and `node_held_bytes` (what a soak holds flat) |
+| `net/stress.hpp` | Pressure tests over the traffic session: ramps bisected to a knob's breaking point against `StressBounds`, the named chaos scripts and their endings, the soak, the fuzzer (`stress_fuzz.cpp`) |
 
 ## Rules
 
@@ -113,6 +117,28 @@ skier. A game's half (what it replicates, its message ids, its lobby's settings)
   `--radius=150`): a replicated world under each preset: each client's bandwidth, corrections a
   minute and the worst, snapshots dropped, rows starved, inputs repeated, and how far the
   server's rewind lands from what each client drew; bandwidth charted, rewind gaps boxed.
+- `make lab LAB=net-lockstep` (`--presets=lan,wifi,bad --seats=4 --turn-steps=6 --delay=2`;
+  `--send-every=3`, `--max-rollback=8`, `--plant=600`): four strategy seats in turns and two
+  fighting seats with rollback under each preset: waits, an order's and a pad's latency, bytes,
+  rollbacks and their depth, agreement; a planted desync and the step it is named on.
+- `make lab LAB=net-stress` (`--knobs=loss,bandwidth --mix=action --soak-seconds=3600`): each
+  knob ramped to its breaking point, its latencies charted against the knob, and a soak's held
+  memory charted. `make lab LAB=net-chaos` (`--scripts=partition,rebind --clients=16`): every
+  client's ending under each script, the connected clients charted. `make lab LAB=net-fuzz`
+  (`--datagrams=1000000 --spoof=0`): the honest session beside the fuzz, from strangers and
+  spoofed. `ge net stress --chaos=all --soak=3600 --fuzz=1000000` runs all four at once; reach
+  for it after any change to the node, the connection or the wire, and put its table in the PR.
+- `make lab LAB=net-predict` (`--presets=wifi,bad --skew=0.02 --hz=72,120`): each preset at each
+  tick rate, fixed against time sync against smoothing, true clocks and skewed: an input's time
+  to the server's step, the repeats, the view delay, the ticks drawn past the newest snapshot,
+  the corrections, the drawn paths' jerk and the error when snapshots run late; charts of one
+  client's queue, the delay, the jerk and the late error. Run it before and after any change to
+  the client's clock, the slack, the smoothing or the interpolation. Every duration in
+  `ReplicateConfig` is in seconds at `tick_hz`: a new one is too, or it is wrong at 72 Hz. Its
+  joust (`--predict-radius=6 --predict-max=0.1`) pairs the clients charging each other with the
+  partner predicted or interpolated: corrections a minute and a contact, the partner's drawn
+  error, the events' outcomes and the replay's cost. Compare a joust's rows on a link past the
+  horizon over several `--seed`s: there they differ only by the network's draws.
 - `ge net sweep --knob=update-rate --values=10,20,30,60 --presets=wifi,bad`: the replication
   trial once a value; reach for it before arguing about a rate. `ge net watch --port=27950`: a
   running node's tap, live; a game opens one with `open_tap` and `transport.tap`.

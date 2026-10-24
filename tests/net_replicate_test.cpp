@@ -224,7 +224,7 @@ TEST(replicate_deltas_are_smaller_than_whole_snapshots) {
   run(*w, 120);
   const ReplicateStats moving = w->server.stats;
   CHECK(moving.full == before.full);  // every client acks: no whole snapshot after the first
-  const double whole = (32 * (18.0 + 64) / 8) + 18;  // every row new
+  const double whole = (32 * (18.0 + 64) / 8) + 19;  // every row new
   const double per_moving = static_cast<double>(moving.bytes - before.bytes) /
                             static_cast<double>(moving.snapshots - before.snapshots);
   CHECK(per_moving < whole);
@@ -235,7 +235,7 @@ TEST(replicate_deltas_are_smaller_than_whole_snapshots) {
   const ReplicateStats still = w->server.stats;
   const double per_still = static_cast<double>(still.bytes - still0.bytes) /
                            static_cast<double>(still.snapshots - still0.snapshots);
-  CHECK(per_still <= 18);
+  CHECK(per_still <= 19);  // the 16-byte header and the 3-byte count
   for (const auto& c : w->clients) CHECK(c->stats.dropped == 0);
 }
 

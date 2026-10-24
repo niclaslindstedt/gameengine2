@@ -18,6 +18,9 @@
 //                           one knob (a rate, the interpolation, a link condition): bandwidth
 //                           each way, view delay, corrections, rewind gaps; the cheapest value
 //                           within reach of the best named
+//   ge net stress           each link knob ramped until the session breaks a bound, bisected to
+//                           its breaking point; --chaos, --soak and --fuzz add the other
+//                           pressure tests (net/stress.hpp)
 //
 // No game and no build are needed: everything runs inside ge.
 //
@@ -25,6 +28,7 @@
 // ge:keywords cli ge net network inspect stats sim pcap capture rtt loss bandwidth kbps
 // ge:keywords fake-traffic conditions preset mix link wireshark multiplayer sweep rate
 // ge:keywords update-rate cmd-rate replicate experiment knee watch tap live attach running
+// ge:keywords stress ramp breaking-point chaos soak fuzz pressure
 // ge:skill agent-interface net
 // ge:test tests/cli_net_test.cpp
 #pragma once
@@ -34,6 +38,7 @@
 
 #include "cli/commands.hpp"
 #include "cli/outcome.hpp"
+#include "net/conditions.hpp"
 
 namespace ge::cli {
 
@@ -88,7 +93,25 @@ struct NetSweepOptions {
   unsigned seed = 1;
 };
 
+struct NetStressOptions {
+  std::vector<std::string> knobs;  // empty: every knob
+  std::string preset = "broadband";
+  std::string mix = "racing";
+  std::string link;  // overrides on the preset
+  int clients = 8;
+  double seconds = 6;
+  int steps = 8, refine = 4;
+  std::vector<std::string> chaos;  // scripts to run too ("all": every one)
+  double soak = 0;                 // virtual seconds of soak (0: none)
+  int soak_clients = 32;
+  double fuzz = 0;  // fuzzed datagrams (0: none)
+  unsigned seed = 1;
+};
+
 Outcome run_net_inspect(const NetInspectOptions& opts);
+Outcome run_net_stress(const NetStressOptions& opts);
+// "latency=40,loss=2%" onto `c`; the first bad key or value, or empty.
+std::string apply_link(const std::string& spec, net::LinkConditions& c);
 Outcome run_net_stats(const NetStatsOptions& opts);
 Outcome run_net_sim(const NetSimOptions& opts);
 Outcome run_net_sweep(const NetSweepOptions& opts);

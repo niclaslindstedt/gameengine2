@@ -294,6 +294,23 @@ constexpr FlagSpec kNetSweepFlags[] = {
     {"backup", "<n>", "inputs repeated in every input message (default 4)"},
     {"seed", "<n>", "the network's, the hands' and the crowd's seed (default 1)"}};
 
+constexpr FlagSpec kNetStressFlags[] = {
+    {"knobs", "<a,b>", "the knobs to ramp: loss, burst, latency, jitter, bandwidth (default all)"},
+    {"preset", "<name>", "the conditions each ramp starts from (default broadband)"},
+    {"mix", "<racing|action|rpg|world|lockstep|download>", "the traffic's shape (default racing)"},
+    {"link", "<k=v,...>", "override the preset's conditions (as ge net sim)"},
+    {"clients", "<n>", "clients a session, 1..32 (default 8)"},
+    {"seconds", "<s>", "how long each ramp's session sends (default 6)"},
+    {"steps", "<n>", "a ramp's coarse steps (default 8)"},
+    {"refine", "<n>", "bisections to the breaking point (default 4)"},
+    {"chaos", "<a,b|all>",
+     "also run chaos scripts: flap, partition, host-lost, host-restart, rebind, skew, burst, "
+     "collapse"},
+    {"soak", "<s>", "also soak a session this many virtual seconds (default none)"},
+    {"soak-clients", "<n>", "clients in the soak (default 32)"},
+    {"fuzz", "<n>", "also put this many fuzzed datagrams beside an honest session"},
+    {"seed", "<n>", "the network's seed (default 1)"}};
+
 const CommandSpec kCommands[] = {
     {"help",
      "[<command>]",
@@ -461,6 +478,12 @@ const CommandSpec kCommands[] = {
      "port: each connection's packets, kbps, round trip and loss every second, then the whole "
      "watch saved as a capture and measured as ge net stats measures it",
      kNetWatchFlags, "ge net watch --port=27950 --seconds=30", "multiplayer"},
+    {"net stress", "", 0, 0, "measure",
+     "the network pushed until it breaks: each link knob ramped until a traffic mix breaks a "
+     "bound (inputs late, snapshots lost, a reliable message lost, a drop), bisected to its "
+     "breaking point; --chaos, --soak and --fuzz add the scripts, the long run and the fuzzer",
+     kNetStressFlags, "ge net stress --mix=action --chaos=all --soak=3600 --fuzz=1000000",
+     "multiplayer"},
     {"net sweep", "", 0, 0, "measure",
      "a replicated world run once a value of one knob (a rate, the interpolation, a link "
      "condition or a drop pattern): bandwidth each way, view delay, corrections, rewind gaps, "
