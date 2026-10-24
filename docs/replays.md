@@ -144,6 +144,46 @@ patent-encumbered encoder. The CONTAINERS are the engine's own: fragmented MP4 (
 playable file up to the last fragment) and WebM, written in C++ in `engine/capture`, small and
 held by golden tests. ffmpeg stays a lab tool only (`ge record`), never a player's dependency.
 
+It lands in four rows:
+
+| Row | What | Lab |
+| --- | --- | --- |
+| M23d1 | The export's core: the engine's Matroska muxer and reader, I420, the run's sound on the play contract, `record --format=mkv` with the sound in lockstep, uncompressed | `capture`, `capture-run` |
+| M23d2 | The software encoders (VP9 by libvpx, Opus by libopus) and the fragmented MP4 muxer | `capture` |
+| M23d3 | The live capture: the readback ring and the mix tapped, stamped on the run clock | `capture` |
+| M23d4 | The platform's hardware encoders | `capture` (on the machine that has one) |
+
+### The export's core (M23d1)
+
+`engine/capture` is compiled into `ge_play` (the export is `record`'s), and holds:
+
+- `ebml.hpp` and `matroska.hpp`: the MUXER. An EBML header, a Segment whose size is patched on
+  close, a reserved Void the SeekHead is written into on close, the Info (a 1 ms timestamp scale,
+  the duration patched on close), the Tracks (video 1, audio 2), Clusters of SimpleBlocks cut at a
+  video keyframe after a second or 16 MB, and the Cues at the end. A file is written as it goes,
+  so a crash leaves every whole cluster readable (the segment's size reads as unknown). The doc type
+  is `webm` when every codec is one WebM allows, `matroska` otherwise.
+- `mkv_read.hpp`: the READER the tests and the labs take a file apart with (tracks, every block's
+  time, offset and size, the clusters, the cues, the seek head).
+- `yuv.hpp`: RGBA to I420 and back, BT.709 at limited range in integer arithmetic, so a picture
+  converts to the same bytes everywhere.
+- `av_export.hpp`: THE A/V CLOCK. Picture k is at `k / fps` and shows the step `record`'s frame
+  clock picks; a step's sound starts at sample `round((step - from) * rate / hz)`. The synth is
+  rendered up to a step's sample before the run's sound hears that step (`Sound::step`), and each
+  picture's sound (from its time to the next picture's) is muxed just before the next picture, so
+  the file is interleaved by time. The sound runs exactly as long as the pictures:
+  `frame_sample(frames)` samples a channel.
+- `sync_fixture.hpp`: a game that flashes and clicks on the same steps, the proof of the clock.
+
+THE RUN'S SOUND is on the play contract (`play/game.hpp`): a game registers a `SoundSpec`
+(`GE_SOUND`) that opens its sound over a synth the export owns; `step` hears each step, `frame`
+moves the beds. Fall Line's is `games/fall_line/sound/play_sound.hpp` (its route and mix).
+
+Until M23d2 the video is uncompressed I420 and the sound 32-bit float PCM in a `.mkv`: about 1.4 MB
+a second at 320x180 and 30 fps, 41 MB a second at 720p. ffmpeg plays and converts it
+(`ffmpeg -i run.mkv run.mp4`); `ge record --format=mkv` writes it with no ffmpeg at all. It plays
+at `--speed=1` only, since a run's sound is its own pace.
+
 ## Broadcasting to a video service (M23e)
 
 The services a player streams to take RTMP: plain RTMP and RTMPS carry H.264 and AAC, and Enhanced
@@ -191,6 +231,7 @@ environment or the game's own settings, never hard-coded in the engine.
 | `replay-file` | Does a replay file round-trip, refuse another version, and does a clip play its marks? | M23b |
 | `replay-cut` | Which moments did the director cut to, when, at what rate, and is each shot spaced from the last? | M23c |
 | `capture` | Does a replay export decode to its frames and its sound, is the sound in sync to a frame (a click and a flash on the same step), and what does each encoder cost a frame? | M23d |
+| `capture-run` | Does Fall Line's race export with its own sound, every picture and every sample of it in the file, and is the sound never silence? | M23d1 |
 | `stream` | Does an RTMP session to a test ingest in the lab carry every frame, does the bitrate follow a narrowed link and recover, and is the key never printed? | M23e |
 | `spectate` | Do spectators through a relay over every network preset step to the player's digest, how late, and at how many bytes a second? | M23f |
 | `discord` | Against a stand-in Discord client in the lab: the handshake, the activity set and cleared, a join request answered? | M23g |

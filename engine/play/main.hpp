@@ -23,9 +23,10 @@
 //   play record [<log> | --seed=S] [--view=V]               the run as a video (record.hpp): the
 //               [--from=N|Ns] [--to=N|Ns] [--fps=30]        view at each frame of --fps, the run
 //               [--speed=1] [--size=WxH] [--format=mp4]     at --speed, encoded by ffmpeg (mp4,
-//               [--codec=C] [--crf=N | --bitrate=4M]        webm, gif; png writes the frames) and
-//               [--encoder-preset=P] [--thumbs=24]          a contact sheet of --thumbs stills,
-//               [--band=0] [--<option>=V] [--out=DIR]       each with its time and step, in DIR
+//               [--codec=C] [--crf=N | --bitrate=4M]        webm, gif; png writes the frames; mkv
+//               [--encoder-preset=P] [--thumbs=24]          is the engine's own, with the run's
+//               [--band=0] [--sound=0] [--<option>=V]       sound) and a contact sheet of --thumbs
+//               [--out=DIR]                                 stills, each with its time and step
 //   play cvar ls [<prefix>] | get <name>...                 the game's cvars (console_cmds.hpp)
 //   play cfg check|exec <file>... [--server] [--cmd=C]      cfg files run against them: problems,
 //   play cfg dump                                           what changed; every player setting

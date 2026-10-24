@@ -28,6 +28,13 @@
 // THE KEYFRAME is a `clone` of the run (engine/replay): a replay seeks by cloning the nearest one
 // and stepping it on off the input log.
 //
+// THE RUN'S SOUND (`ge record --format=mkv`, engine/capture/av_export.hpp): a play executable
+// built with its game's sound also registers a `SoundSpec` (`GE_SOUND(spec)`), whose `open` sets a
+// synth up for the game (its buses, its beds) and returns the `Sound` that plays a run into it:
+// `step` after every step (the step's events as one-shots) and `frame` once a picture (the beds
+// steered to the run as it stands). The caller renders the synth, so an export hears the run
+// sample for sample on the run's own clock.
+//
 // THE TRACE is what `ge why` reads: a Run whose bots write decision records (ai/why.hpp) says so
 // by accepting a recorder (`trace`), and the engine replays a log with it on (play/why.hpp).
 //
@@ -44,6 +51,7 @@
 // ge:keywords snap_axis ge_game register view views shoot shot picture caption trace why
 // ge:keywords clone keyframe copy
 // ge:keywords renderer renderer-spec ge_renderer gpu mode modes lit wireframe depth overlay
+// ge:keywords sound sound-spec ge_sound synth audio export
 // ge:keywords cvars console cfg
 // ge:skill agent-interface
 // ge:test tests/play_session_test.cpp
@@ -59,6 +67,10 @@
 #include "ai/why.hpp"
 #include "console/console.hpp"
 #include "lab/raster.hpp"
+
+namespace ge::audio {
+class Synth;
+}
 
 namespace ge::play {
 
@@ -220,6 +232,28 @@ struct RendererRegister {
   explicit RendererRegister(const RendererSpec& spec);
 };
 
+// A run's sound, played into the synth its spec opened it over (THE RUN'S SOUND above).
+class Sound {
+ public:
+  virtual ~Sound() = default;
+  // After each step of `run`: that step's events.
+  virtual void step(const Run& run) = 0;
+  // Once a picture, `dt` seconds after the last: the beds steered to `run` as it stands.
+  virtual void frame(const Run& run, double dt) = 0;
+};
+
+struct SoundSpec {
+  // The game's sound over `synth`, or null with `error` saying why (a run of another game).
+  std::unique_ptr<Sound> (*open)(audio::Synth& synth, std::string& error);
+};
+
+// The sound registered in this executable, or null (a game with no sound).
+const SoundSpec* registered_sound();
+
+struct SoundRegister {
+  explicit SoundRegister(const SoundSpec& spec);
+};
+
 }  // namespace ge::play
 
 #define GE_GAME_CAT2(a, b) a##b
@@ -229,3 +263,5 @@ struct RendererRegister {
 // Register `spec` (a RendererSpec with static storage) as this executable's GPU renderer.
 #define GE_RENDERER(spec) \
   static ::ge::play::RendererRegister GE_GAME_CAT(ge_renderer_reg_, __LINE__)(spec)
+// Register `spec` (a SoundSpec with static storage) as this executable's sound.
+#define GE_SOUND(spec) static ::ge::play::SoundRegister GE_GAME_CAT(ge_sound_reg_, __LINE__)(spec)

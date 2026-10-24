@@ -26,6 +26,11 @@ const RendererSpec*& renderer_slot() {
   return spec;
 }
 
+const SoundSpec*& sound_slot() {
+  static const SoundSpec* spec = nullptr;
+  return spec;
+}
+
 bool read_number(std::string_view word, double& out) {
   const std::string s(word);
   if (s.empty()) return false;
@@ -89,6 +94,10 @@ GameRegister::GameRegister(const GameSpec& spec) { slot() = &spec; }
 const RendererSpec* registered_renderer() { return renderer_slot(); }
 
 RendererRegister::RendererRegister(const RendererSpec& spec) { renderer_slot() = &spec; }
+
+const SoundSpec* registered_sound() { return sound_slot(); }
+
+SoundRegister::SoundRegister(const SoundSpec& spec) { sound_slot() = &spec; }
 
 int64_t InputLog::steps() const {
   int64_t n = 0;

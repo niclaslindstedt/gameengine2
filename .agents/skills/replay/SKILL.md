@@ -19,6 +19,12 @@ stepped again through the game's own `Run`, never a recording of positions or pi
 | `replay/index.hpp/.cpp` | The index: a directory's replay files as list rows for a menu's browser, a broken file a problem line |
 | `replay/director.hpp/.cpp` | The director: marks ranked and spaced into a cut of shots by the game's `ShotRule`s; the reel's clock over the shots at their rates |
 | `replay/live.hpp/.cpp` | The live run: a session that keeps keyframes and marks; the instant replay lent the live keeper and handed back |
+| `capture/ebml.hpp/.cpp`, `capture/matroska.hpp/.cpp` | The muxer: EBML elements; a Matroska / WebM file of a video and an audio track, clusters cut at keyframes, the seek head, cues and duration patched on close |
+| `capture/mkv_read.hpp/.cpp` | The reader the tests and labs take a file apart with: tracks, blocks, clusters, cues, seek head |
+| `capture/yuv.hpp/.cpp` | RGBA to I420 and back, BT.709 limited range in integers |
+| `capture/av_export.hpp/.cpp` | The A/V clock: pictures on the frame clock, the synth rendered to each step's sample before the run's sound hears it, the file interleaved by time |
+| `capture/sync_fixture.hpp/.cpp` | A game that flashes and clicks on the same steps, with its sound |
+| `play/game.hpp`'s `Sound`, `SoundSpec`, `GE_SOUND` | The run's sound on the play contract; Fall Line's is `games/fall_line/sound/play_sound.hpp` |
 
 `tests/replay_walker.hpp` is the toy game the replay tests share (a walker on its own seeded
 stream, its log and the straight digest).
@@ -55,3 +61,15 @@ stream, its log and the straight digest).
   LAB=replay-cut` before and after: every flight cut and opening before its lip, no spacing fault,
   `mismatches` 0. A reel is played off the live keeper (`Live::watch`), never a fresh player that
   would step the whole race again at its first cut.
+- **A run's sound lands on its step's sample.** A step's sound starts at
+  `round((step - from) * rate / hz)`: the export renders the synth up to that sample before
+  `Sound::step` hears the step, and each picture's sound is muxed before the next picture. Any
+  change to `av_export`, `record`'s mkv path or a game's `Sound` runs `make lab LAB=capture`
+  before and after: `late`, `early` and `unshown` 0, `sound-off-ms` under 0.1; Fall Line's runs
+  `make lab LAB=capture-run` too (the sound never silence, every picture and sample in the file).
+- **The muxer's bytes are pinned.** `tests/capture_matroska_test.cpp` pins one small file's hash;
+  a deliberate change of the layout rewrites it and says why in the PR. The file must still read
+  when cut at a cluster's end (a crash), and ffmpeg must decode what the labs write.
+- **The export is offline and steady.** It renders the synth on demand, never through the audio
+  device, so the file's sound is the run's whatever the machine's speed; it plays at `--speed=1`
+  only.

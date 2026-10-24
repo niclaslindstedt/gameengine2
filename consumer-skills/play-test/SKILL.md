@@ -67,7 +67,9 @@ by default), the run at `--speed` (2 twice as fast, 0.25 slow motion) from `--fr
 (a step, or seconds with an `s`), each frame with its time, step and view burned in. ffmpeg
 encodes it: `--format=mp4` (H.264, the default), `webm` (VP9) or `gif`; `--size=WxH`, `--crf`
 (lower is better and larger) or `--bitrate=4M`, `--encoder-preset` (H.264's speed against size).
-`--format=png` keeps the frames as PNGs and needs no ffmpeg. Beside it the CONTACT SHEET: a grid
+`--format=png` keeps the frames as PNGs and needs no ffmpeg; `--format=mkv` is the engine's own
+file with the run's SOUND (the game's `GE_SOUND`; `--sound=0` leaves it out), uncompressed and
+large, at `--speed=1` only, also with no ffmpeg. Beside it the CONTACT SHEET: a grid
 of `--thumbs` stills, each labelled with its time and step, the run at a glance; read it first,
 then watch the stretch it points at. It builds the release preset, since every frame is drawn on
 the CPU.

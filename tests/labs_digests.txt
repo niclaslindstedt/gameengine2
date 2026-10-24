@@ -10,6 +10,8 @@ camera-rigs bd01263b4d16d23c
 camera-shake 3d1734df5bafe175
 camera-transitions 750b195eaca33076
 camera-world 663b2b2d72b24d8b
+capture 65fdfcf8245cd8c1
+capture-run 37cb60d7564b6edc
 charts 77f2319a5ea24272
 cli-loop 2a54afc4b75dac63
 console e8456b0db59560ce

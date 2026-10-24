@@ -487,7 +487,8 @@ int record_cmd(const GameSpec& spec, const Line& l, std::ostream& out) {
   }
   static const std::initializer_list<const char*> kOwn = {
       "seed", "view",    "from",           "to",     "fps",     "speed", "size", "format", "codec",
-      "crf",  "bitrate", "encoder-preset", "thumbs", "columns", "band",  "out",  "gpu",    "mode"};
+      "crf",  "bitrate", "encoder-preset", "thumbs", "columns", "band",  "out",  "gpu",    "mode",
+      "sound"};
   InputLog log;
   std::string error;
   if (l.words.size() == 1) {
@@ -537,8 +538,10 @@ int record_cmd(const GameSpec& spec, const Line& l, std::ostream& out) {
   text_flag("bitrate", o.encoding.bitrate);
   text_flag("encoder-preset", o.encoding.preset);
   if (const auto it = l.flags.find("band"); it != l.flags.end()) o.band = it->second != "0";
+  const auto sound_it = l.flags.find("sound");
+  if (sound_it == l.flags.end() || sound_it->second != "0") o.sound = registered_sound();
   if (const std::string why = encoding_problem(o.encoding); !why.empty()) {
-    return problem(out, 2, why, "the command line", "pass --format=mp4 (or webm, gif, png)");
+    return problem(out, 2, why, "the command line", "pass --format=mp4 (or webm, gif, mkv, png)");
   }
   const auto out_it = l.flags.find("out");
   const fs::path dir = out_it == l.flags.end() ? fs::path("runs") : fs::path(out_it->second);
@@ -570,8 +573,8 @@ int record_cmd(const GameSpec& spec, const Line& l, std::ostream& out) {
       << ",\"speed\":" << core::num::to_string(o.speed)
       << ",\"seconds\":" << core::num::to_fixed(rec->seconds, 2) << ",\"from\":" << rec->from
       << ",\"to\":" << rec->to << ",\"digest\":" << quote(hex64(rec->digest))
-      << ",\"encoder\":" << quote(rec->encoder)
-      << ",\"log\":" << quote(rec->encoder.empty() ? "" : o.log)
+      << ",\"encoder\":" << quote(rec->encoder) << ",\"samples\":" << rec->samples
+      << ",\"bytes\":" << rec->bytes << ",\"log\":" << quote(rec->encoder.empty() ? "" : o.log)
       << ",\"gpu\":" << (o.gpu ? "true" : "false") << ",\"views\":[" << lens_views_json(spec, o.gpu)
       << "]}\n";
   return 0;

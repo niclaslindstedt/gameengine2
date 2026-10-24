@@ -27,6 +27,8 @@ set_target_properties(play PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_
 file(GLOB FALL_LINE_SOUND_SOURCES CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/sound/*.cpp)
 add_library(fall_line_sound STATIC ${FALL_LINE_SOUND_SOURCES})
 target_link_libraries(fall_line_sound PUBLIC fall_line_sim ge_skier_app ge_audio)
+# The play executable writes a run with its sound (`ge record --format=mkv`).
+target_link_libraries(play PRIVATE fall_line_sound)
 set_property(GLOBAL APPEND PROPERTY GE_GAME_TARGETS fall_line_sound)
 
 # Its camera (camera/): the ladder of engine rigs a run is seen from, the skier as the camera's

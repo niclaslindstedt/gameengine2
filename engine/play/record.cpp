@@ -12,6 +12,7 @@
 #include <cstdlib>
 #include <filesystem>
 
+#include "capture/av_export.hpp"
 #include "core/num_text.hpp"
 #include "lab/png.hpp"
 #include "play/session.hpp"
@@ -75,8 +76,9 @@ lab::Picture even(lab::Picture p) {
 }  // namespace
 
 std::string encoding_problem(const Encoding& e) {
-  if (e.format != "mp4" && e.format != "webm" && e.format != "gif" && e.format != "png") {
-    return "no format `" + e.format + "`; the formats are mp4, webm, gif and png";
+  if (e.format != "mp4" && e.format != "webm" && e.format != "gif" && e.format != "png" &&
+      e.format != "mkv") {
+    return "no format `" + e.format + "`; the formats are mp4, webm, gif, mkv and png";
   }
   if (e.crf > 63) return "--crf " + std::to_string(e.crf) + " is over 63";
   for (const std::string* w : {&e.codec, &e.bitrate, &e.preset}) {
@@ -176,8 +178,14 @@ std::optional<Recording> record(const GameSpec& spec, const InputLog& log, const
     error = why;
     return std::nullopt;
   }
-  const bool video = !opt.video.empty() && opt.encoding.format != "png";
+  const bool own = !opt.video.empty() && opt.encoding.format == "mkv";
+  const bool video = !opt.video.empty() && opt.encoding.format != "png" && !own;
   const bool frames_dir = !opt.video.empty() && opt.encoding.format == "png";
+  if (own && opt.sound && opt.speed != 1) {
+    error =
+        "an mkv's sound plays at the run's pace, and --speed is " + core::num::to_string(opt.speed);
+    return std::nullopt;
+  }
   if (video && !ffmpeg_found()) {
     error = "ffmpeg is not installed, and a " + opt.encoding.format + " needs it";
     return std::nullopt;
@@ -218,9 +226,14 @@ std::optional<Recording> record(const GameSpec& spec, const InputLog& log, const
   std::FILE* pipe = nullptr;
   std::error_code ec;
   if (frames_dir) fs::create_directories(opt.video, ec);
+  capture::AvExport av;
+  bool av_open = false;
   int64_t at = 0;
   for (int64_t k = 0; k < n; k++) {
-    while (at < steps[static_cast<size_t>(k)]) s.step(log.at(at++));
+    while (at < steps[static_cast<size_t>(k)]) {
+      s.step(log.at(at++));
+      if (av_open) av.stepped(s.run(), at);
+    }
     lab::Picture raw;
     std::string caption;
     if (!shoot_lens(lens, s.run(), raw, caption, error)) break;
@@ -255,6 +268,19 @@ std::optional<Recording> record(const GameSpec& spec, const InputLog& log, const
         return std::nullopt;
       }
     }
+    if (own && !av_open) {
+      capture::AvExportOptions ao;
+      ao.file = opt.video;
+      ao.width = frame.width;
+      ao.height = frame.height;
+      ao.fps = opt.fps;
+      ao.hz = spec.hz;
+      ao.from = at;
+      ao.sound = opt.sound;
+      if (!av.open(ao, error)) return std::nullopt;
+      av_open = true;
+    }
+    if (av_open && !av.frame(s.run(), frame, error)) break;
     if (pipe && std::fwrite(frame.rgba.data(), 1, frame.rgba.size(), pipe) != frame.rgba.size()) {
       error = "ffmpeg stopped taking frames at frame " + std::to_string(k) + "; its log says why";
       break;
@@ -269,6 +295,12 @@ std::optional<Recording> record(const GameSpec& spec, const InputLog& log, const
     }
   }
   rec.digest = s.run().digest();
+  if (av_open) {
+    std::string close_error;
+    if (!av.close(close_error) && error.empty()) error = close_error;
+    rec.samples = av.samples();
+    rec.bytes = av.bytes();
+  }
   if (pipe && close_pipe(pipe) != 0 && error.empty()) {
     error = "ffmpeg failed to encode " + opt.video + "; its log says why";
   }

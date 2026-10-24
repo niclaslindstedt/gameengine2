@@ -1,7 +1,9 @@
 // Fall Line's sound (games/fall_line/sound): every bank sound has a sentence and a unique id, and
 // every id the route plays is in the bank; the faders fold the master and the switch into the
 // buses; the listener's chase seat is the tuned one; and the route plays the player's events
-// (a gate, a landing in powder, a fall) and not a rival's, on the effects bus.
+// (a gate, a landing in powder, a fall) and not a rival's, on the effects bus; and the play
+// contract's sound (play_sound.hpp) plays a run of the game into an export's synth and nothing
+// for a run of another game.
 //
 // ge:summary Tests for Fall Line's bank, faders, listener and event route
 // ge:keywords test sound bank route listener faders mix_of events
@@ -11,11 +13,15 @@
 #include <vector>
 
 #include "audio/meter.hpp"
+#include "capture/sync_fixture.hpp"
 #include "check.hpp"
 #include "fall_line/sim/game.hpp"
+#include "fall_line/sim/play.hpp"
 #include "fall_line/sound/bank.hpp"
 #include "fall_line/sound/mix.hpp"
+#include "fall_line/sound/play_sound.hpp"
 #include "fall_line/sound/route.hpp"
+#include "play/game.hpp"
 
 namespace {
 
@@ -88,4 +94,46 @@ TEST(a_landing_in_powder_is_the_whumpf_and_a_harsh_one_is_harder) {
   CHECK(hard > soft);
   state.racers[0].skier.packed = 0;
   CHECK(loudest_after(state, {{sim::EventKind::landing, 0, 0, 2}}) > -45);
+}
+
+TEST(the_play_contracts_sound_plays_a_run_and_nothing_for_another_game) {
+  namespace gp = ge::play;
+  gp::Setup setup;
+  std::string error;
+  CHECK(gp::make_setup(sim::kGame, 38, {}, setup, error));
+  auto run = sim::kGame.open(setup, error);
+  CHECK_MSG(run != nullptr, error.c_str());
+  if (!run) return;
+  ge::audio::Synth synth;
+  auto sound = snd::kSound.open(synth, error);
+  CHECK(sound != nullptr);
+  if (!sound) return;
+  // Ten seconds down the race on the bot's hands (the start lights first), steered once a
+  // frame at 60 fps.
+  std::vector<double> input(sim::kGame.axes.size(), 0.0);
+  std::vector<float> out;
+  std::vector<float> chunk(size_t{2} * 800);
+  for (int frame = 0; frame < 600; frame++) {
+    for (int k = 0; k < 2; k++) {
+      run->pilot(input);
+      run->step(input);
+      sound->step(*run);
+    }
+    sound->frame(*run, 1.0 / 60);
+    synth.render(chunk.data(), 800);
+    out.insert(out.end(), chunk.begin(), chunk.end());
+  }
+  // The wind of the ride bed rising off the start (about -40 dBFS at its loudest by 10 s).
+  CHECK(ge::audio::measure(out).loudest_db > -60);
+  // A run of another game is not a Fall Line run: nothing is routed.
+  ge::audio::Synth quiet;
+  auto other = snd::kSound.open(quiet, error);
+  gp::Setup none;
+  CHECK(gp::make_setup(ge::capture::kSyncGame, 0, {}, none, error));
+  auto fixture = ge::capture::kSyncGame.open(none, error);
+  if (!other || !fixture) return;
+  other->step(*fixture);
+  other->frame(*fixture, 1.0 / 60);
+  quiet.render(chunk.data(), 800);
+  CHECK(ge::audio::measure(chunk).loudest_db < -90);
 }

@@ -15,10 +15,16 @@
 // THE ENCODER is ffmpeg, an external tool (`ffmpeg -version` finds it); frames go to it raw on
 // a pipe, so nothing the size of the video is held in memory. Its own output is in `log`.
 //
+// `mkv` is the ENGINE'S OWN FILE (engine/capture/av_export.hpp), with no ffmpeg: the frames as
+// uncompressed I420 in the engine's Matroska muxer and the run's SOUND beside them (the game's
+// `SoundSpec`, play/game.hpp), rendered by the synth on the run's own clock, so it plays at
+// --speed=1 only. It is large (width * height * 1.5 bytes a frame) until the encoders land
+// (docs/replays.md, row M23d2).
+//
 // ge:summary A run recorded: a view drawn at a frame rate, encoded by ffmpeg, and a contact sheet
 // ge:keywords record video recording mp4 webm gif h264 vp9 ffmpeg encode frames frame-rate speed
 // ge:keywords contact-sheet thumbnails timestamps resolution crf bitrate frame_steps
-// ge:keywords gpu-recording record-gpu mode lit wireframe depth overlay
+// ge:keywords gpu-recording record-gpu mode lit wireframe depth overlay mkv sound
 // ge:skill agent-interface
 // ge:test tests/play_record_test.cpp
 #pragma once
@@ -35,10 +41,11 @@
 
 namespace ge::play {
 
-// How the frames become a file. `format` mp4 (H.264), webm (VP9), gif, or png (frames in a
-// directory, no encoder). An empty `codec` is the format's own; `crf` < 0 its usual quality
-// (23 for H.264, 32 for VP9: lower is better and larger); a `bitrate` ("4M") replaces the crf.
-// `preset` is H.264's speed against size (ultrafast .. veryslow; default medium).
+// How the frames become a file. `format` mp4 (H.264), webm (VP9), gif, mkv (the engine's own,
+// with sound: above), or png (frames in a directory, no encoder). An empty `codec` is the format's
+// own; `crf` < 0 its usual quality (23 for H.264, 32 for VP9: lower is better and larger); a
+// `bitrate` ("4M") replaces the crf. `preset` is H.264's speed against size (ultrafast .. veryslow;
+// default medium).
 struct Encoding {
   std::string format = "mp4";
   std::string codec;
@@ -73,6 +80,7 @@ struct RecordOptions {
   int width = 0, height = 0;  // 0: the view's own size (each made even for the encoder)
   bool band = true;           // the time, step and view burned into each frame
   Encoding encoding;
+  const SoundSpec* sound = nullptr;  // mkv: the game's sound (null: no audio track)
   std::string video;  // the file (format != png), or the frames' directory (png); "" none
   std::string log;    // the encoder's output
   std::string sheet;  // the contact sheet's PNG; "" none
@@ -87,7 +95,9 @@ struct Recording {
   int64_t from = 0, to = 0;
   double seconds = 0;   // the video's length
   uint64_t digest = 0;  // the run's at `to`
-  std::string encoder;  // the ffmpeg command, "" for png frames
+  std::string encoder;  // the ffmpeg command, "" for png frames and mkv
+  int64_t samples = 0;  // mkv: the sound's samples a channel (0: no audio track)
+  int64_t bytes = 0;    // mkv: the file's size
 };
 
 // `log` played from its start, `opt.view` drawn at every frame step from `opt.from` to `opt.to`,
