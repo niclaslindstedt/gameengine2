@@ -206,6 +206,41 @@ Everything above the backend is deterministic: the shapes, the ramps and the eff
 `core::libm`, and no clock is read but the events' stamps. So the same events give the same
 actions on every machine, and the labs' digests hold them.
 
+## Fall Line played by hand
+
+`games/fall_line/controls` is the first game on the layer, and the shape a game repeats:
+
+- **The actions and the defaults** (`bindings.hpp`). The `ride` context's actions carry the play
+  contract's axis names (`steer`, `tuck`, `brake`, `jump`, `reset`), so `play::bind_axes` pairs
+  them with no table between. The `app` context holds what only the window does (`camera`,
+  `rebind`). The defaults are a bindings file in the source (`kDefaultBindings`): A and D or the
+  arrows steer through a ramp (a tap is a small turn), W tucks, S brakes, SPACE jumps, R resets,
+  C the camera, F5 rebinds; the left stick, the triggers, south and north on a pad; a wheel's
+  steer, throttle and brake roles. A keyboard, a pad and a wheel play at once.
+- **The player's file** is `bindings.txt` in the platform's per-user directory
+  (`platform::prefs_dir`), the defaults until it exists. A file that does not read keeps the
+  defaults and names the line.
+- **The rebinding walk** (`rebinding.hpp`): F5 asks for each action in turn (steer left, steer
+  right, tuck, brake, jump, reset, camera), captures the next deliberate input, keeps the slot's
+  push and ramp, names any other action the source is also on, and saves the file. Escape stops
+  it. The menu's keys page (M22d) will draw the same walk.
+- **What is felt** (`felt.hpp`): a step's events pick a rumble pulse for every pad with motors (a
+  landing by its load, a wipeout, a trunk brushed, a gate missed, another racer met, an injury,
+  the finish). A pulse never cuts a stronger one short.
+- **The run played by hand** (`by_hand.hpp`) is the play contract's own run, so a person's run is
+  stepped, hashed and written down exactly as an agent's is. The `fall_line` window writes it as
+  an input log when it closes (`runs/fall_line-<seed>.inputs` in the per-user directory, or
+  `--inputs`), and `ge replay` plays it back to its digest. `--bot` hands the skis to the bot
+  through the same loop. A sky the `sv_` cvars pick is skied too (the run opened on the map under
+  it, `sim::open_run_on`), and that log is not one `ge replay` rebuilds from the seed.
+- **A scripted session** (`script.hpp`): `--events=<ge-events file>` plays a device event log
+  into the window's loop in place of the devices, and `--record-events` writes one. A scripted
+  frame is granted the steps due by its time, counted in whole nanoseconds (`steps_due`), so a
+  session steps the same run on every machine at any frame rate. `pad_session` holds an input
+  log's axes on a simulated pad; through `kExactPadBindings` (no dead zone, no curve) every step
+  reads back the log's own axes, so the bot's run held on a pad finishes the race on the bot's
+  digest. `tests/fall_line_controls_test.cpp` and the `by-hand` lab hold that.
+
 ## Labs
 
 | Lab | Kind | What it shows |
@@ -213,6 +248,7 @@ actions on every machine, and the labs' digests hold them.
 | `input-shape` | picture | Each dead zone's output against the push on a diagonal and near a cardinal; the response curves; the key ramps over time |
 | `input-session` | scenario | A scripted session on a simulated keyboard, mouse, pad, wheel with pedals and touch screen, read through a skier's, a shooter's and a racer's action maps at once; written as an event log, read back and replayed to the bit; two players joining and a pad unplugged and returned; rebinding a shooter's jump by pressing |
 | `input-ffb` | scenario | Force-feedback effects on the simulated rim under a hand: a spring and a damper bringing it back (the settle time and the overshoot), a spring ringing, a constant pull held straight, a road's rumble |
+| `by-hand` | drive | Fall Line's bot's run held on a simulated pad as a device session and played back by hand through the bindings: the steps that read other axes than the bot's (0), the finish and the digest, the log replayed; the pad's stick and trigger against the steer and the tuck; the rumble motors over the run; the default bindings as a table. Writes the session, the run's log and the defaults for the window and `ge replay` |
 | `input-devices` | scenario | One script on a pad and a wheel played through SDL's own virtual devices (the platform's backend, headless) and through the simulated backend: a skier's and a racer's actions held to each other frame by frame (the largest gap per action, the 16-bit step); rumble, its end, the light and the player lights reaching the pad; the pad unplugged and plugged in again as a new device |
 
 ## Decisions

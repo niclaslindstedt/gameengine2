@@ -182,4 +182,12 @@ void set_text_input(Window& window, bool on) {
 
 uint64_t now_ns() { return SDL_GetTicksNS(); }
 
+std::string prefs_dir(std::string_view org, std::string_view app) {
+  char* path = SDL_GetPrefPath(std::string(org).c_str(), std::string(app).c_str());
+  if (!path) return {};
+  std::string dir = path;
+  SDL_free(path);
+  return dir;
+}
+
 }  // namespace ge::platform

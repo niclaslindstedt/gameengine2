@@ -15,7 +15,7 @@
 // ge:summary The window, its native handles, per-frame input snapshot and the frame clock
 // ge:keywords platform window sdl native-window surface-handles input keyboard pointer mouse
 // ge:keywords focus quit resize pixel-size hidpi input-snapshot poll clock ticks monotonic
-// ge:keywords headless display_available open_window poll_input now_ns
+// ge:keywords headless display_available open_window poll_input now_ns prefs_dir prefs user-dir
 // ge:skill platform
 // ge:test tests/platform_window_test.cpp
 #pragma once
@@ -23,6 +23,7 @@
 #include <array>
 #include <cstdint>
 #include <memory>
+#include <string>
 #include <string_view>
 
 namespace ge::platform {
@@ -115,5 +116,11 @@ void poll_input(Window& window, InputSnapshot& input);
 
 // A monotonic clock, ns. For the frame's delta only: the simulation never sees it.
 uint64_t now_ns();
+
+// The player's own directory for what a game keeps between sessions (the bindings file, the
+// runs), made when missing and ending in a separator: the platform's per-user place for an app's
+// data under `org` and `app`. Empty when there is none (then a game keeps nothing, or asks for a
+// path).
+std::string prefs_dir(std::string_view org, std::string_view app);
 
 }  // namespace ge::platform
