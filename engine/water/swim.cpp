@@ -2,6 +2,7 @@
 //
 // ge:summary Swimming: the immersion level, the two regimes, cold and breath: definitions
 // ge:keywords water swim immersion friction accelerate idle-sink column buoyancy soak cold breath
+// ge:keywords viscous stokes-drag yield liquid-motion
 // ge:skill water
 // ge:test tests/water_swim_test.cpp
 #include "water/swim.hpp"
@@ -17,6 +18,7 @@ namespace ge::water {
 
 namespace {
 
+constexpr double kPi = 3.141592653589793;
 constexpr double kHead = 0.12;         // m over the eyes to the top of the head
 constexpr double kStroke = 1.2;        // s a stroke flat out
 constexpr double kRecoverBreath = 6;   // a breath caught back this many times faster than held
@@ -33,12 +35,14 @@ bool wet_at(const World& world, double x, double y, double z, double t) {
   return s.body >= 0 && s.depth > 0;
 }
 
-void kinematic(const SwimSpec& spec, const SwimInput& in, SwimState& st, double dt) {
-  // The wish: the input's direction at the swim's share of the run speed, or the slow sink.
+void kinematic(const SwimSpec& spec, const SwimScale& motion, const SwimInput& in, SwimState& st,
+               double dt) {
+  // The wish: the input's direction at the swim's share of the run speed, or the slow sink; both
+  // scaled by the liquid's motion (1 in water).
   const double effort = core::num::min(1.0, length(in));
-  double wx = 0, wy = -spec.idle_sink, wz = 0;
+  double wx = 0, wy = -spec.idle_sink * motion.sink, wz = 0;
   if (effort > 1e-9) {
-    const double k = spec.run_speed * spec.wish_scale / length(in) * effort;
+    const double k = spec.run_speed * spec.wish_scale * motion.speed / length(in) * effort;
     wx = in.x * k;
     wy = in.y * k;
     wz = in.z * k;
@@ -47,7 +51,9 @@ void kinematic(const SwimSpec& spec, const SwimInput& in, SwimState& st, double 
   // The friction, by the depth of the water.
   double speed = std::sqrt(st.v.x * st.v.x + st.v.y * st.v.y + st.v.z * st.v.z);
   if (speed > 0) {
-    const double kept = core::num::max(0.0, speed - dt * speed * spec.friction * st.level) / speed;
+    const double kept =
+        core::num::max(0.0, speed - dt * speed * spec.friction * motion.friction * st.level) /
+        speed;
     st.v.x *= kept;
     st.v.y *= kept;
     st.v.z *= kept;
@@ -137,7 +143,28 @@ void body(const World& world, const SwimSpec& spec, const SwimInput& in, SwimSta
       if (ev) ev->stroke = true;
     }
   }
-  const double nvx = vx + ax / mass * dt, nvy = vy + ay / mass * dt, nvz = vz + az / mass * dt;
+  double nvx = vx + ax / mass * dt, nvy = vy + ay / mass * dt, nvz = vz + az / mass * dt;
+  // A viscous liquid's Stokes drag on his equivalent sphere, taken implicitly (a thick liquid's
+  // is stiff), and a Bingham liquid's yield gripping his wetted skin, which takes up to its
+  // force's worth of his speed through the water a step and never turns him round.
+  const double ux = w.vx * share, uy = w.vy * share, uz = w.vz * share;
+  const double stokes = 6 * kPi * w.viscosity * std::sqrt(area / kPi) * share;
+  if (w.body >= 0 && stokes > 0) {
+    const double keep = 1 / (1 + stokes / mass * dt);
+    nvx = ux + (nvx - ux) * keep;
+    nvy = uy + (nvy - uy) * keep;
+    nvz = uz + (nvz - uz) * keep;
+  }
+  if (w.body >= 0 && w.yield > 0) {
+    const double gx = nvx - ux, gy = nvy - uy, gz = nvz - uz;
+    const double g = std::sqrt(gx * gx + gy * gy + gz * gz);
+    if (g > 0) {
+      const double kept = core::num::max(0.0, g - w.yield * spec.skin * share / mass * dt) / g;
+      nvx = ux + gx * kept;
+      nvy = uy + gy * kept;
+      nvz = uz + gz * kept;
+    }
+  }
   st.v = {nvx * s, nvy * s, nvz * s};
   st.p.x += st.v.x * dt;
   st.p.y += st.v.y * dt;
@@ -215,7 +242,14 @@ void step_swimmer(const World& world, const SwimSpec& spec, const SwimInput& inp
     }
   }
   if (spec.regime == Regime::kinematic) {
-    if (st.level >= 2) kinematic(spec, input, st, dt);
+    if (st.level >= 2) {
+      // The liquid at his waist sets the motion's scales.
+      const double sc = spec.scale > 0 ? spec.scale : 1;
+      const Sample w = sample(world, st.p.x / sc, st.p.y / sc + spec.waist, st.p.z / sc, t);
+      const SwimScale motion =
+          w.body >= 0 ? world.bodies[static_cast<size_t>(w.body)].stuff.liquid.swim : SwimScale{};
+      kinematic(spec, motion, input, st, dt);
+    }
     return;
   }
   if (st.level >= 1) body(world, spec, input, st, t, dt, events);

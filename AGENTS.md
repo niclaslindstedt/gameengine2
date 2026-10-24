@@ -42,6 +42,7 @@ updates that row's status file (`docs/goals/<row>.md`) in its PR.
 | [`docs/replays.md`](docs/replays.md) | Replays, recording and broadcasting: a run kept as its inputs, keyframes and the seek, the replay file, the director, video with sound, streaming to a video service, spectating by inputs, Discord presence (M23) |
 | [`docs/shooters-edge.md`](docs/shooters-edge.md) | The second game, Shooter's Edge (M18, after Fall Line): the compatibility contract, the clean room, the homes, the protocols, the labs and the `ge` commands it needs |
 | [`docs/water.md`](docs/water.md) | Water and wind (M24): the bodies and the one query, the waves the wind grows, floating, swimming tuned per game, flowing water, the colour from what is in the water, the surface and the view under it, the sound, and the labs |
+| [`docs/liquids.md`](docs/liquids.md) | Liquids other than water (M30): viscosity, yield and harm on a body's stuff, the wind and the swimmer in them, lava and slime drawn, and the labs |
 
 **The working area.** `porting/` holds everything that only matters while modules are
 being carried over from their reference sources: the porting guide (`porting/README.md`),

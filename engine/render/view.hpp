@@ -167,6 +167,11 @@ struct FrameView {
   Weather weather{};  // the cloud and the fog; the default is a clear sky
   Night night{};      // the moon, the stars and the dark sky's glow; the default is none
   Clouds clouds{};    // the cloud's layers; the default is none
+  // THE SCENE'S OWN LIGHT the eye adapts to: the luminance of the bright emitters filling the
+  // view (a lava lake's mean glow, a lit street's), cd/m^2. The exposure keys a white face under
+  // the sky or this, whichever is brighter, so a lava lake at night reads as a photograph of it
+  // would, not blown out against a dark sky. 0: the sky's light alone.
+  double adapt_cd = 0;
   // THE REACH, m: how far the picture draws. Past half of it a mist closes every surface into
   // the sky behind it, all of it by the reach, and nothing farther is drawn; 0: no reach, no mist.
   double reach_m = 0;

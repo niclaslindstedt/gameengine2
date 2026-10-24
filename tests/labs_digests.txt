@@ -22,6 +22,8 @@ forest f1881cb20efe0144
 frame-pace c5058023a52812c3
 free 2b3f2cf5100bf9b4
 gpu-capture 8b5d5e3b7be5a4fc
+gpu-lava 0c288375858e883f
+gpu-slime 34e861611a9a3ba6
 gpu-underwater eb4871f6a59d741e
 gpu-water f43c11858a5a6d30
 gunfire c4f5b96a6cfec13c
@@ -36,6 +38,7 @@ lake cd671548fc72e5d6
 ladder 825b7f06d92b69d3
 level 4fbff3da7a82c4aa
 lift-ride a374f35eb85cc161
+liquids 95c4a0866172aadd
 mapgen-cost 3baf51b6907817f3
 menu 1c01d0b767f484fc
 model-views 0d0824a2168f6b14

@@ -36,7 +36,7 @@
 // ge:summary Bodies of water (lake, ocean, channel, volume) and the one sample query
 // ge:keywords water world body lake ocean river channel stream volume brush hull add_lake
 // ge:keywords add_ocean add_river add_volume sample surface depth bed current density look
-// ge:keywords optics colour add_flow step_flows
+// ge:keywords optics colour add_flow step_flows lay_waves liquid viscosity yield drift
 // ge:skill water
 // ge:test tests/water_world_test.cpp
 #pragma once
@@ -49,6 +49,7 @@
 
 #include "water/fetch.hpp"
 #include "water/flow.hpp"
+#include "water/liquid.hpp"
 #include "water/optics.hpp"
 #include "water/waves.hpp"
 #include "wind/field.hpp"
@@ -80,12 +81,15 @@ struct Hull {
 };
 
 // What a body is made of: its look (a name among `water::looks()`, or the constituents of the
-// game's own in `water`, which win), and the numbers the physics needs.
+// game's own in `water`, which win), and the numbers the physics needs: the density and
+// temperature, and the liquid's flow, its swim and its harm (liquid.hpp; a named liquid's whole
+// row is `water::liquid(name)`, liquids.hpp).
 struct Stuff {
   std::string look = "nordic-clear";
   double density = 1000;    // kg/m^3 (1025 sea water)
   double temperature = 10;  // degrees C
   std::optional<Constituents> water{};
+  Liquid liquid{};  // thin water by default: no viscous term, the classic swim, no harm
 };
 
 struct Body {
@@ -104,6 +108,7 @@ struct Body {
   FetchGrid fetch;                    // a lake's fetch per point
   double fetch_ref = 0;               // the fetch its waves were laid for, m
   double box[4] = {0, 0, 0, 0};       // x0, z0, x1, z1 over its plan (unbounded for an ocean)
+  double drift[2] = {0, 0};           // a viscous liquid's surface drift under the wind, m/s (x, z)
 };
 
 struct World {
@@ -125,6 +130,10 @@ int add_river(World& world, std::span<const ChannelPoint> centreline, double dis
 int add_volume(World& world, std::span<const Hull> hulls, Stuff stuff = {});
 // A flow region (flow.hpp) laid as a body: its water is what `sample` returns where it is wet.
 int add_flow(World& world, Flow flow, Stuff stuff = {});
+// The wind's sea laid on any body over `fetch` m (a volume's: its plan's width), cut by its
+// liquid's viscosity (`damp_waves`), with the surface's drift (`drift`); a volume's surface
+// then carries them. A body laid by add_lake, add_ocean or add_river has them already.
+void lay_waves(World& world, int body, double fetch);
 // Every flow region one step of `dt` s.
 void step_flows(World& world, double dt);
 
@@ -138,6 +147,8 @@ struct Sample {
   double bed = 0;                 // the bed's height under the point, m
   double density = 1000;          // kg/m^3
   double temperature = 10;        // degrees C
+  double viscosity = 0;           // Pa s (0: thin)
+  double yield = 0;               // Pa
   Breaking breaking;              // the foam's three shares
 };
 

@@ -69,6 +69,12 @@ void put_surface(const World& world, const Body& body, double level, double x, d
   out.depth = out.surface - y;
   out.density = body.stuff.density;
   out.temperature = body.stuff.temperature;
+  out.viscosity = body.stuff.liquid.viscosity;
+  out.yield = body.stuff.liquid.yield;
+  if (body.drift[0] != 0 || body.drift[1] != 0) {
+    out.vx += body.drift[0];
+    out.vz += body.drift[1];
+  }
   out.breaking = breaking_at(s, water_depth, world.wind.mean);
 }
 
@@ -159,7 +165,8 @@ bool in_hull(const Hull& hull, double x, double y, double z) {
   return true;
 }
 
-bool sample_volume(const Body& body, double x, double y, double z, Sample& out) {
+bool sample_volume(const World& world, const Body& body, double x, double y, double z, double t,
+                   Sample& out) {
   for (const Hull& hull : body.hulls) {
     const double top = hull_top(hull, x, z);
     if (top >= 1e300) continue;
@@ -176,6 +183,15 @@ bool sample_volume(const Body& body, double x, double y, double z, Sample& out) 
       if (p.ny < 0) out.bed = core::num::max(out.bed == top ? -1e300 : out.bed, p.d / p.ny);
     out.density = body.stuff.density;
     out.temperature = body.stuff.temperature;
+    out.viscosity = body.stuff.liquid.viscosity;
+    out.yield = body.stuff.liquid.yield;
+    // Waves laid on it by hand (lay_waves): the surface theirs, held under the depth's share.
+    if (body.waves.count > 0) {
+      const double bed = out.bed;
+      put_surface(world, body, top, x, y, z, t,
+                  shallow_scale(body.waves, 1, core::num::max(0.0, top - bed)), top - bed, out);
+      out.bed = bed;
+    }
     return true;
   }
   return false;
@@ -203,6 +219,8 @@ bool sample_flow(const World& world, const Body& body, double x, double y, doubl
   out.bed = s.bed;
   out.density = body.stuff.density;
   out.temperature = body.stuff.temperature;
+  out.viscosity = body.stuff.liquid.viscosity;
+  out.yield = body.stuff.liquid.yield;
   return true;
 }
 
@@ -216,6 +234,18 @@ void box_of(Body& body, double x0, double z0, double x1, double z1) {
 }  // namespace
 
 namespace {
+
+// A viscous liquid's waves cut by its viscosity, and its drift downwind over `depth` m (a thin
+// liquid's untouched: no drift is added to its samples, so water keeps its bits).
+void thicken(const World& world, Body& body, double depth) {
+  const Liquid& liquid = body.stuff.liquid;
+  if (liquid.viscosity <= 0) return;
+  damp_waves(body.waves, liquid, body.stuff.density, world.wind.mean);
+  const double toward = world.wind.from + kPi;
+  const double d = drift(liquid, world.wind.mean, depth);
+  body.drift[0] = d * core::libm::sin(toward);
+  body.drift[1] = d * core::libm::cos(toward);
+}
 
 // The body's stuff and the optics its look gives.
 void dress(Body& body, Stuff stuff) {
@@ -254,6 +284,7 @@ int add_lake(World& world, std::span<const Point> shore, double level, Stuff stu
   body.fetch = bake_fetch(shore, world.wind.from + kPi);
   body.fetch_ref = body.fetch.longest;
   body.waves = waves_for(world, world.bodies.size(), body.fetch_ref, depth);
+  thicken(world, body, depth);
   world.bodies.push_back(std::move(body));
   return static_cast<int>(world.bodies.size()) - 1;
 }
@@ -268,6 +299,7 @@ int add_ocean(World& world, double level, Stuff stuff, Bed bed, double fetch) {
   box_of(body, -kFar, -kFar, kFar, kFar);
   body.fetch_ref = fetch;
   body.waves = waves_for(world, world.bodies.size(), fetch, kOceanDepth);
+  thicken(world, body, kOceanDepth);
   world.bodies.push_back(std::move(body));
   return static_cast<int>(world.bodies.size()) - 1;
 }
@@ -299,6 +331,7 @@ int add_river(World& world, std::span<const ChannelPoint> centreline, double dis
   body.fetch_ref = widest;
   body.depth = deepest;
   body.waves = waves_for(world, world.bodies.size(), widest, deepest);
+  thicken(world, body, deepest);
   world.bodies.push_back(std::move(body));
   return static_cast<int>(world.bodies.size()) - 1;
 }
@@ -324,6 +357,33 @@ int add_flow(World& world, Flow flow, Stuff stuff) {
   return static_cast<int>(world.bodies.size()) - 1;
 }
 
+void lay_waves(World& world, int index, double fetch) {
+  Body& body = world.bodies[static_cast<size_t>(index)];
+  double depth = body.depth;
+  if (body.kind == Kind::volume) {
+    // The deepest of its hulls: its top less its floor, under the middle of its plan.
+    depth = 0;
+    for (const Hull& hull : body.hulls) {
+      double top = 1e300, floor = -1e300;
+      for (const Plane& p : hull.planes) {
+        if (p.ny > 0 && p.nx == 0 && p.nz == 0) top = core::num::min(top, p.d / p.ny);
+        if (p.ny < 0 && p.nx == 0 && p.nz == 0) floor = core::num::max(floor, p.d / p.ny);
+      }
+      if (top < 1e300 && floor > -1e300) depth = core::num::max(depth, top - floor);
+    }
+  }
+  body.fetch_ref = fetch;
+  body.waves = waves_for(world, static_cast<size_t>(index), fetch, core::num::max(depth, 0.01));
+  if (body.stuff.liquid.viscosity > 0) {
+    thicken(world, body, depth);
+  } else {
+    const double toward = world.wind.from + kPi;
+    const double d = kDriftShare * world.wind.mean;
+    body.drift[0] = d * core::libm::sin(toward);
+    body.drift[1] = d * core::libm::cos(toward);
+  }
+}
+
 void step_flows(World& world, double dt) {
   for (Flow& flow : world.flows) step_flow(flow, dt);
 }
@@ -347,7 +407,7 @@ Sample sample(const World& world, double x, double y, double z, double t) {
         hit = sample_channel(world, body, x, y, z, t, s);
         break;
       case Kind::volume:
-        hit = sample_volume(body, x, y, z, s);
+        hit = sample_volume(world, body, x, y, z, t, s);
         break;
       case Kind::flow:
         hit = sample_flow(world, body, x, y, z, s);

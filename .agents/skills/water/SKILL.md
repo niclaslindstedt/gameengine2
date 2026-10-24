@@ -31,6 +31,11 @@ for anything the simulation reads, `render` for a pass, `audio` for a voice, `la
 | The surface drawn: rings, the waves kept per vertex and pixel, the mirror, the glitter | `engine/render/water.hpp`, `water.wgsl` | `gpu-water`, `lake` | `tests/render_water_test.cpp` |
 | The view under water: the fog, blur, Snell's window, the presets | `engine/render/underwater.hpp`, `underwater.wgsl` | `gpu-underwater`, `lake` | `tests/render_water_test.cpp` |
 | Water in Fall Line's frame (`add_water`) | `games/fall_line/app/frame.hpp` | `lake` | `create_frame`'s pass-table check |
+| Liquids: viscosity, yield, the wind's keep and drift, the swim they give, ripples (`docs/liquids.md`) | `engine/water/liquid.hpp` | `liquids` | `tests/water_liquid_test.cpp` (golden) |
+| Harm: ticks, burns by thermal dose, radiant heat | `engine/water/harm.hpp` | `liquids` | `tests/water_harm_test.cpp` (golden) |
+| A black body's glow | `engine/water/glow.hpp` | `gpu-lava` | `tests/water_glow_test.cpp` |
+| The named liquids (lava, slime, ...) | `engine/water/liquids.hpp` | `liquids` | `tests/water_liquids_test.cpp` |
+| Lava and slime drawn, the looks, the eye's key (`adapt_cd`) | `engine/render/liquid.hpp`, `liquid.wgsl` | `gpu-lava`, `gpu-slime` | `tests/render_liquid_test.cpp` |
 | Drawn, sound | the rows M24g–M24l | the doc's § Labs | as each row lands |
 
 ## The rules

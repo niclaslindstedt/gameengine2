@@ -33,6 +33,11 @@
 //   and caught again at the surface; `SwimState::drowning` says it has run out. The lungs are
 //   full while it is held and at their residual once it is gone.
 //
+// IN A LIQUID (liquid.hpp): the kinematic regime's wish speed, friction and idle sink are scaled
+// by the liquid's `SwimScale` at his waist; the body regime adds a viscous liquid's Stokes drag on
+// his equivalent sphere (taken implicitly) and a Bingham liquid's yield on his wetted skin, so he
+// wades through slime and is held fast in tar; a liquid denser than he is floats him high.
+//
 // THE WATER JUMP, both regimes: at level 2, holding jump, facing a lip the game's collision finds
 // within reach (`Ledge`, a callback, since the engine does not know the world's solids), the
 // swimmer is thrown up at `jump_speed` and forward at `jump_push` for `jump_time`, the game's
@@ -88,6 +93,7 @@ struct SwimSpec {
   double lungs = 0.0045;     // m^3 of air with a breath held
   double residual = 0.0012;  // m^3 of air left when it is gone
   double area = 0.12;        // m^2 frontal, swimming
+  double skin = 1.8;         // m^2 of skin a liquid's yield grips, all of him in
   double drag = 1.0;         // the drag coefficient
   double thrust = 90;        // N, the stroke flat out
   double stamina = 600;      // s of flat-out effort a full stamina holds

@@ -10,6 +10,9 @@ The roadmap rows are M24a–M24l in [`goals.md`](goals.md); each row's status is
 `goals/M24<x>.md`. This page is the design those rows build to. Every number in it is a
 starting value: the row that builds it measures it in its lab and corrects it here.
 
+Water is one liquid of many: lava, slime and any other liquid a game names are water's stuff
+given a viscosity, a yield and a harm. They are in [`liquids.md`](liquids.md) (M30).
+
 ## What the games ask of it
 
 | Game | Water it needs | Swimming | Flow |
@@ -507,6 +510,7 @@ never read back by the simulation.
 | `water-audition` | sound | M24j | Every water voice, metered and written as WAV |
 | `water-cost` | bench | M24f, M24g | The CPU's costs per step (sample, floats, the flow grid) and the GPU's per pass |
 | `free --water` | drive | M24l | Fall Line: the bot near and into water on the free ride |
+| `liquids`, `gpu-lava`, `gpu-slime` | picture | M30 | The other liquids: lava and slime (`docs/liquids.md` § Labs) |
 
 ## Sources
 
