@@ -10,6 +10,7 @@
 // ge:summary The ge executable: parses the command line against the catalog and runs each command
 // ge:keywords cli ge main command-line usage dispatch help version new find explain use add
 // ge:keywords build test check precheck ci digest golden lab graph shot upgrade doctor skills net
+// ge:keywords snow
 // ge:keywords lessons json bench profile mem leaks asset blender
 // ge:skill agent-interface
 // ge:test tests/cli_commands_test.cpp
@@ -39,6 +40,7 @@
 #include "cli/play.hpp"
 #include "cli/scaffold.hpp"
 #include "cli/skills.hpp"
+#include "cli/snow.hpp"
 #include "cli/sweep.hpp"
 #include "cli/upgrade.hpp"
 
@@ -324,6 +326,8 @@ Outcome run(const Args& a) {
     as.blender = flag_value(a, "blender");
     return run_asset_build(build_options(a), as);
   }
+  if (name == "snow show") return run_snow_show(a.words[0], flag_value(a, "out"));
+  if (name == "snow column") return run_snow_column(a.words[0], flag_value(a, "at"));
   if (name == "graph") {
     GraphOptions g;
     g.files = a.words;

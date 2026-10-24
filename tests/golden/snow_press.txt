@@ -1,0 +1,4 @@
+# snow tiles records surface-bits density-bits snapshot-fnv (snow_press_test: every reference contact's track over powder, settled and groomed snow)
+0 11 169 3fd50e5604189375 405f3b2303e3fce3 1678fb5b136b72f4
+1 4 49 3fd0000000000000 4074500000000000 5d82e22e96aeb4c4
+2 0 0 3fc3333333333333 407e000000000000 0449c46352217310

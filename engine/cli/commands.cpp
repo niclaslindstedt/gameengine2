@@ -230,6 +230,10 @@ constexpr FlagSpec kRecordFlags[] = {
      "the build to record with (default release: a frame is drawn on the CPU)"},
     kEngine,
     kRepo};
+constexpr FlagSpec kSnowShowFlags[] = {
+    {"out", "<dir>", "where the PNGs go (default: snow/ beside the file)"}};
+constexpr FlagSpec kSnowColumnFlags[] = {{"at", "<x,z>", "the point, m (required)"}};
+
 constexpr FlagSpec kGraphFlags[] = {
     {"kind", "<auto|line|scatter|hist|box|heat|spans>",
      "the chart (default auto: spans for a spans file, line for the rest)"},
@@ -390,6 +394,14 @@ const CommandSpec kCommands[] = {
      "chart series or spans files (a trace, a bench, a profile) to PNG and SVG; several files "
      "overlay; every outlier comes back as a note",
      kGraphFlags, "ge graph runs/before.tsv runs/after.tsv --columns=step_ms", "debug"},
+    {"snow show", "<file.snow>", 1, 1, "see",
+     "a saved snow layer read without its game: its tiles and memory, the samples pressed, the "
+     "deepest drop and the densest snow, the mass held, and depth, density and state maps",
+     kSnowShowFlags, "ge snow show runs/yard.snow", "snow"},
+    {"snow column", "<file.snow>", 1, 1, "see",
+     "the column of a saved snow layer at a point: depth, density, packed share, kind, and "
+     "whether a press changed it",
+     kSnowColumnFlags, "ge snow column runs/yard.snow --at=3.5,-12", "snow"},
     {"net inspect", "<pcap>", 1, 1, "see",
      "a capture decoded datagram by datagram: time, addresses, packet type, sequence, acks, "
      "each message's channel, id and size",
