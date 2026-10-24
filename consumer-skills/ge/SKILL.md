@@ -50,6 +50,7 @@ ge profile [--render]            # where the step's (and the frame's) time goes,
 ge mem | ge leaks                # what the run allocates; what it never frees
 ge graph <file>... [--kind=<k>]  # chart traces, benches, profiles: PNG + SVG, outliers as notes
 ge net inspect <pcap>            # a network capture, datagram by datagram (skill: multiplayer)
+ge save inspect <file>           # a save file's header, meta and chunks, or why it is refused (skill: saves)
 ge net stats <pcap>              # per connection: kbps, round trip, loss, resends; charted
 ge net sim [--presets=wifi,bad]  # fake clients and a host over bad links, no game needed
 ge cvar ls [<prefix>]            # the game's settings: value, default, range, flags, help

@@ -11,7 +11,7 @@ camera-shake 3d1734df5bafe175
 camera-transitions 750b195eaca33076
 camera-world 663b2b2d72b24d8b
 charts 77f2319a5ea24272
-cli-loop 2a54afc4b75dac63
+cli-loop c2dbee573abc42e3
 console 29c50e9ed9fe631e
 crowd cf02cf9a7c917783
 crowd-look 194a06db20f2ebb2
@@ -32,8 +32,8 @@ input-ffb 565464637bf28b86
 input-session dcb313b33f4ddf37
 input-shape e2284bbd066830af
 junctions 036999ca677e12e6
-lake cd671548fc72e5d6
 ladder 825b7f06d92b69d3
+lake cd671548fc72e5d6
 level 4fbff3da7a82c4aa
 lift-ride a374f35eb85cc161
 mapgen-cost 3baf51b6907817f3
@@ -66,6 +66,7 @@ resort f82a1fca6fb6ba42
 ride c3794669e029f0c9
 routes 739cf0534473b4f8
 run-clock 81607c7ac1161166
+save-file af8b493923a33269
 shadows 5b0d6051c10638b4
 sight 2c2aefbe619a6874
 sim a9c6d0f6bb29ce2a

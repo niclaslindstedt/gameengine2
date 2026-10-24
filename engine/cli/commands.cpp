@@ -399,6 +399,16 @@ const CommandSpec kCommands[] = {
      "round trip, loss each way, duplicates, reorders, resends; kbps, rtt and loss over time "
      "charted",
      kNetStatsFlags, "ge net stats previews/net-link/bad.pcap", "multiplayer"},
+    {"save inspect",
+     "<file>",
+     1,
+     1,
+     "see",
+     "a save file's header, the meta a menu lists and every chunk (tag, instance, version, "
+     "offset, bytes, checksum), or the one line that says why it is refused",
+     {},
+     "ge save inspect saves/slot-1",
+     "saves"},
     {"shot", "[<log>]", 0, 1, "see",
      "a still of a run at a step, drawn headless and captioned (seed, options, step, digest): "
      "a log played to --step, or the pilot's run of --seed; the game's options go after --",

@@ -69,7 +69,7 @@ foreach(src ${GE_TEST_SOURCES})
     continue()
   endif()
   add_executable(${name} ${src} $<TARGET_OBJECTS:ge_test_main>)
-  target_link_libraries(${name} PRIVATE ge_core ge_audio ge_assets ge_net ge_input ge_wind ge_water ge_move ge_camera ge_ui ge_lab ge_play ge_replay ${GE_PLUGIN_TARGETS} ${GE_GAME_TARGETS}
+  target_link_libraries(${name} PRIVATE ge_core ge_audio ge_assets ge_net ge_input ge_wind ge_water ge_move ge_camera ge_ui ge_save ge_lab ge_play ge_replay ${GE_PLUGIN_TARGETS} ${GE_GAME_TARGETS}
     ${extra} ${cli})
   target_compile_definitions(${name} PRIVATE GE_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
   add_test(NAME ${name} COMMAND ${name})
