@@ -40,6 +40,7 @@
 #include "cli/scaffold.hpp"
 #include "cli/skills.hpp"
 #include "cli/sweep.hpp"
+#include "cli/texture.hpp"
 #include "cli/upgrade.hpp"
 
 namespace {
@@ -153,6 +154,12 @@ Outcome run(const Args& a) {
     const std::string base = flag_value(a, "base");
     return run_goals_free(fs::absolute(repo_of(a)), a.words.empty() ? "" : a.words[0],
                           base.empty() ? "origin/main" : base, has_flag(a, "fetch"));
+  }
+  if (name == "texture kinds") return run_texture_kinds();
+  if (name == "texture check") return run_texture_check(fs::absolute(repo_of(a)), a.words);
+  if (name == "texture bake") {
+    return run_texture_bake(fs::absolute(repo_of(a)), a.words[0], flag_value(a, "ref"),
+                            flag_value(a, "size"), flag_value(a, "out"));
   }
   if (name == "new") return cmd_new(a);
   if (name == "use") return run_use(repo_of(a), a.words[0]);

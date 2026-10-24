@@ -1,0 +1,17 @@
+# Old red brick: a building's outside wall that ages with the room.
+texture brick_wall
+size    512
+seed    7
+surface stone
+scale   2
+tags    wall brick exterior
+param   wear 0.3 0 1
+param   dirt 0.35 0 1
+
+layer bricks  rows=10 cols=4 color=#8c4a32 vary=0.18 mortar_color=#a49c8e
+layer noise   kind=perlin period=24 octaves=5 amount=0.35 blend=overlay height=0.06
+layer noise   kind=white period=512 octaves=1 amount=0.12 blend=overlay
+layer grime   amount=0.55
+layer wear    amount=$wear color=#b07a5c
+layer dirt    amount=$dirt period=3
+layer streaks amount=$dirt count=24 length=0.4

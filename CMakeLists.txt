@@ -16,6 +16,7 @@
 #   ge_ai        the bots' layer (engine/ai: the decision record `ge why` reads)
 #   ge_wind      the wind as a pure function of place and time (engine/wind; docs/water.md)
 #   ge_water     bodies of water, the waves a wind grows on them and the one query (engine/water)
+#   ge_texgen    procedural textures (engine/texgen: recipes, layers, the bake to PNG)
 #   ge_move      character movement (engine/move: the knobs, the step, the box world, scenarios)
 #   ge_camera    the camera (engine/camera: poses, followers, rigs, shake, transitions, the stack)
 #   ge_play      the play contract (engine/play: GameSpec and Run, the session, the input log,
@@ -234,6 +235,13 @@ add_library(ge_lab STATIC engine/lab/lab.cpp engine/lab/report.cpp engine/lab/ru
   engine/lab/model_view.cpp engine/lab/model_compare.cpp engine/lab/model_sheets.cpp)
 target_link_libraries(ge_lab PUBLIC ge_core ge_audio ge_assets)
 
+# Procedural textures (engine/texgen, docs/textures.md): a recipe an agent writes as text,
+# seeded and layered (noise, patterns, dirt, dust, wear, glow) and baked to the maps a renderer
+# samples, cached on disk as PNG. Deterministic, no platform; links ge_lab for the PNG writer.
+file(GLOB GE_TEXGEN_SOURCES CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/engine/texgen/*.cpp)
+add_library(ge_texgen STATIC ${GE_TEXGEN_SOURCES})
+target_link_libraries(ge_texgen PUBLIC ge_core ge_lab)
+
 # The profiler (engine/prof): the timing zones any code opens with GE_ZONE, the allocation
 # counts and the resident set. The counting operator new is its own target, ge_prof_alloc: an
 # executable that links it counts every allocation (the play executable does).
@@ -337,7 +345,7 @@ if(PROJECT_IS_TOP_LEVEL)
   get_property(GE_PLUGIN_TARGETS GLOBAL PROPERTY GE_PLUGIN_TARGETS)
   get_property(GE_GAME_TARGETS GLOBAL PROPERTY GE_GAME_TARGETS)
   add_executable(labs engine/lab/main.cpp ${GE_LAB_SOURCES})
-  target_link_libraries(labs PRIVATE ge_lab ge_play ge_replay ge_core ge_audio ge_assets ge_net ge_input ge_wind ge_water ge_move ge_camera ge_ui ${GE_PLUGIN_TARGETS} ${GE_GAME_TARGETS}
+  target_link_libraries(labs PRIVATE ge_lab ge_play ge_replay ge_core ge_audio ge_assets ge_net ge_input ge_wind ge_water ge_move ge_camera ge_texgen ge_ui ${GE_PLUGIN_TARGETS} ${GE_GAME_TARGETS}
     ${GE_LAB_EXTRA})
 
   # The `assets` executable (engine/assets/tool.hpp): the built assets listed, checked and stamped,

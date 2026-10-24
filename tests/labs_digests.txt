@@ -12,7 +12,7 @@ camera-shake 3d1734df5bafe175
 camera-transitions 750b195eaca33076
 camera-world 663b2b2d72b24d8b
 charts 77f2319a5ea24272
-cli-loop 2a54afc4b75dac63
+cli-loop 41461d1b94c0ffae
 console e8456b0db59560ce
 crowd cf02cf9a7c917783
 crowd-look 194a06db20f2ebb2
@@ -34,8 +34,8 @@ input-ffb 565464637bf28b86
 input-session dcb313b33f4ddf37
 input-shape e2284bbd066830af
 junctions 036999ca677e12e6
-lake cd671548fc72e5d6
 ladder 825b7f06d92b69d3
+lake cd671548fc72e5d6
 level 4fbff3da7a82c4aa
 lift-ride a374f35eb85cc161
 mapgen-cost 3baf51b6907817f3
@@ -87,6 +87,11 @@ steer 1a0cad67ccb0869e
 swim c6acad32e55847d9
 synth 39e6460e5c8a8c8e
 taa 01ee5d58d90a05ce
+texgen-cost cbf29ce484222325
+texgen-layers 1e2fb247a16d44e0
+texgen-noise 8005fe3f79165d24
+texgen-specimens a43045e6b862c54a
+texgen-variants 7b90b55c76d17b3c
 trace cccfaac48bafaa60
 trails 1aaa468d0dbd81a0
 wanted 507dbbcbbbb4187e

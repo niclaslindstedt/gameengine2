@@ -1,0 +1,17 @@
+# Poured concrete: form lines, pits, cracks and the grime of a city.
+texture concrete
+size    512
+seed    3
+surface concrete
+scale   3
+tags    wall floor urban
+param   age 0.4 0 1
+
+layer fill    color=#9c9a94 rough=0.92
+layer noise   kind=value period=4 octaves=6 amount=0.4 blend=overlay height=0.08
+layer noise   kind=cells period=48 octaves=1 lo=0 hi=0.18 invert=1 color=#ffffff color2=#4a4844 blend=multiply amount=0.3 height=-0.15
+layer stripes count=4 dir=y width=0.012 color=#6e6c66 color2=#9c9a94 amount=0.25
+layer cracks  amount=$age period=3 width=0.02 depth=0.3 color=#3a3834
+layer grime   amount=0.5
+layer streaks amount=$age count=30 length=0.5 width=0.02 color=#3e3a33
+layer dirt    amount=$age*0.6 period=2

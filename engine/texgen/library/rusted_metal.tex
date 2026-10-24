@@ -1,0 +1,15 @@
+# Bare steel left out for years: rust eats it from the pits outward.
+texture rusted_metal
+size    512
+seed    44
+surface metal
+scale   1.5
+tags    metal rust industrial ruin
+param   rust 0.65 0 1
+
+layer fill    color=#8a8e92 rough=0.35 metal=1
+layer noise   kind=value period=96 octaves=2 stretch=4 amount=0.2 blend=overlay rough=0.2
+layer noise   kind=turbulence period=6 octaves=5 amount=0 height=0.2
+layer scratches count=200 length=0.2 angle=5 spread=8 amount=0.35 color=#c0c4c8
+layer rust    amount=$rust period=5
+layer grime   amount=0.4

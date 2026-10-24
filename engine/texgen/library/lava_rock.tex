@@ -1,0 +1,15 @@
+# Black basalt with magma glowing in its cracks.
+texture lava_rock
+size    512
+seed    66
+surface stone
+scale   3
+tags    rock lava natural light
+param   heat 1 0 3
+
+layer fill    color=#2a2624 rough=0.85
+layer noise   kind=cells period=6 octaves=2 lo=0 hi=0.7 invert=1 color=#151312 color2=#4a4440 blend=mix amount=0.9 height=0.7
+layer noise   kind=ridged period=8 octaves=4 amount=0.3 blend=overlay height=0.2
+layer cracks  amount=0.8 period=5 width=0.05 depth=0.5 color=#1a0c08 salt=1
+layer glow    pattern=cavity threshold=0.32 color=#ff5a14 intensity=$heat
+layer glow    pattern=cracks period=5 width=0.02 amount=0.7 color=#ffb040 intensity=$heat salt=1

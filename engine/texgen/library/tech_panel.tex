@@ -1,0 +1,15 @@
+# A machine's skin: dark plates, seams and lit lines.
+texture tech_panel
+size    512
+seed    9
+surface metal
+scale   2
+tags    metal tech scifi light
+param   power 1 0 2
+
+layer panels  rows=4 cols=2 color=#2a2f36 vary=0.08 rivets=2 rivet_size=0.025 rough=0.35 metal=1
+layer noise   kind=voronoi period=4 octaves=1 jitter=0 color=#20242a color2=#3a414a blend=mix amount=0.35
+layer glow    pattern=lines period=4 width=0.012 color=#38c8ff intensity=$power
+layer glow    pattern=spots period=8 width=0.05 amount=0.25 color=#ff4040 intensity=$power
+layer scratches count=60 length=0.08 amount=0.2 color=#7a828c
+layer grime   amount=0.4

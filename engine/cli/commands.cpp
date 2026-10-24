@@ -113,6 +113,11 @@ constexpr FlagSpec kLintFlags[] = {
     kPreset,
     kEngine,
     kRepo};
+constexpr FlagSpec kTextureBakeFlags[] = {
+    {"ref", "<words>", "the reference's seed and params: \"seed=12 wear=0.8\""},
+    {"size", "<px>", "bake at this size instead of the recipe's (a power of two)"},
+    {"out", "<dir>", "the cache directory (default build/textures)"},
+    kRepo};
 constexpr FlagSpec kGoalsFlags[] = {
     {"base", "<ref>", "the roadmap rows are already taken on (default origin/main)"},
     {"fetch", "", "git fetch origin first, so every branch is current"},
@@ -327,6 +332,16 @@ const CommandSpec kCommands[] = {
      "the roadmap rows taken on the base and on every remote branch, and the next free number "
      "(or, for a row such as M17, the next free letter under it)",
      kGoalsFlags, "ge goals free --fetch", "commit"},
+    {"texture kinds", "", 0, 0, "learn",
+     "every procedural texture layer kind, its keys, their defaults and ranges", kRepoOnly,
+     "ge texture kinds", "textures"},
+    {"texture check", "<file.tex>...", 1, -1, "build",
+     "parse texture recipes; every mistake a finding at its line", kRepoOnly,
+     "ge texture check textures/brick_wall.tex", "textures"},
+    {"texture bake", "<file.tex>", 1, 1, "build",
+     "bake one texture variant to PNG maps and a .meta in the cache, or reuse it",
+     kTextureBakeFlags, "ge texture bake textures/brick_wall.tex --ref=\"seed=12 wear=0.8\"",
+     "textures"},
     {"new", "<dir>", 1, 1, "create",
      "a game repo against this engine release: the simulation, a lab, a test, the skills",
      kNewFlags, "ge new snow-racer --game=racer", "ge"},

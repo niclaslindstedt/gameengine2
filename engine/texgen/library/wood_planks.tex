@@ -1,0 +1,15 @@
+# A cabin's floor or wall: boards with grain, knots and dark gaps.
+texture wood_planks
+size    512
+seed    12
+surface wood
+scale   2
+tags    wood floor wall cabin
+param   wear 0.35 0 1
+
+layer planks  rows=6 color=#8a5a34 vary=0.22 grain=0.7 knots=0.4
+layer noise   kind=value period=128 octaves=2 stretch=8 amount=0.15 blend=overlay
+layer grime   amount=0.5 reach=0.008
+layer wear    amount=$wear color=#b08a60 rough=-0.2
+layer scratches count=80 length=0.12 angle=0 spread=10 amount=0.25 color=#b49272
+layer dust    amount=0.12 ledges=0.3
